@@ -1,6 +1,6 @@
 import React from 'react';
 import {Routes, Route, Navigate} from 'react-router-dom';
-import TitleBar from './components/organisms/TitleBar';
+import TitleBar from './components/organisms/layout/TitleBar';
 import Home from './screens/Home';
 
 /**

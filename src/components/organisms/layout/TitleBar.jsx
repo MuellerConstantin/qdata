@@ -1,7 +1,8 @@
 import React from 'react';
+import MenuBar from './MenuBar';
 
-import styles from '../../styles/TitleBar.module.css';
-import LogoDark from '../../assets/images/logo-dark.svg';
+import styles from '../../../styles/TitleBar.module.css';
+import LogoDark from '../../../assets/images/logo-dark.svg';
 
 /**
  * The default window title bar. Contains the logo and window controls.
@@ -13,7 +14,10 @@ export default function TitleBar() {
     <div className="bg-gray-100 text-gray-800 w-full h-8">
       <div className={`w-full h-full flex justify-between space-x-2 pl-2 ${styles.draggable}`}>
         <div className="flex items-center space-x-2">
-          <img className="block h-6 w-auto" src={LogoDark} alt="Attoly Logo" />
+          <img className="block h-6 w-auto" src={LogoDark} alt="QData Logo" />
+          <div className={`flex ${styles.controls}`}>
+            <MenuBar />
+          </div>
         </div>
         <div className={`flex ${styles.controls}`}>
           <button

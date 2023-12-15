@@ -1,4 +1,5 @@
 const path = require('path');
+const os = require('os');
 const {app, BrowserWindow, ipcMain} = require('electron');
 
 const isDev = app.isPackaged ? false : require('electron-is-dev');
@@ -51,6 +52,30 @@ app.whenReady().then(() => {
     } else {
       mainWindow?.maximize();
     }
+  });
+
+  ipcMain.handle('getArchInfo', () => {
+    return process.arch;
+  });
+
+  ipcMain.handle('getAppVersion', () => {
+    return app.getVersion();
+  });
+
+  ipcMain.handle('getElectronVersion', () => {
+    return process.versions.electron;
+  });
+
+  ipcMain.handle('getNodeVersion', () => {
+    return process.versions.node;
+  });
+
+  ipcMain.handle('getV8Version', () => {
+    return process.versions.v8;
+  });
+
+  ipcMain.handle('getOsInfo', () => {
+    return `${os.type()} ${os.arch()} ${os.release()}`;
   });
 });
 
