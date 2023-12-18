@@ -6,16 +6,18 @@ import PropTypes from 'prop-types';
  *
  * @return {*} The component
  */
-export default function BorderTemplate({children}) {
+export default function BorderTemplate({children, header, footer}) {
   return (
     <div className="h-full flex flex-col">
-      <header />
+      {header && <header>{header}</header>}
       <main className="grow">{children}</main>
-      <footer />
+      {footer && <footer>{footer}</footer>}
     </div>
   );
 }
 
 BorderTemplate.propTypes = {
   children: PropTypes.node,
+  header: PropTypes.node,
+  footer: PropTypes.node,
 };

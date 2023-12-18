@@ -12,7 +12,9 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col">
       <TitleBar />
-      <div className="grow bg-white">
+      <div
+        className={'grow bg-white h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-200'}
+      >
         <Routes>
           <Route path="/" element={<Navigate to="/home" />} />
           <Route path="/home" element={<Home />} />
