@@ -59,6 +59,7 @@ export default function FileMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm`}
+                      onClick={() => window.electron.ipc.invoke('openFile')}
                     >
                       Open File...
                     </button>
@@ -72,9 +73,7 @@ export default function FileMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm`}
-                      onClick={() => {
-                        window.electron.ipc.send('closeWindow');
-                      }}
+                      onClick={() => window.electron.ipc.send('closeWindow')}
                     >
                       Exit
                     </button>

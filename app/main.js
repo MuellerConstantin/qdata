@@ -3,6 +3,7 @@ const {app, BrowserWindow} = require('electron');
 
 require('./handlers/window');
 require('./handlers/about');
+require('./handlers/file');
 
 const isDev = app.isPackaged ? false : require('electron-is-dev');
 
