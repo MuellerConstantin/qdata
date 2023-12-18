@@ -85,7 +85,7 @@ export default function AboutDialog({onClose, isOpen}) {
                 </div>
               </div>
               <div className="flex justify-end p-4 border-t-2">
-                <Button onClick={onClose} className="!bg-green-600 !text-white !px-8">
+                <Button onClick={onClose} className="!bg-green-600 focus:!outline-green-100 !text-white !px-8">
                   Close
                 </Button>
               </div>

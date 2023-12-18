@@ -1,6 +1,8 @@
 const path = require('path');
-const os = require('os');
-const {app, BrowserWindow, ipcMain} = require('electron');
+const {app, BrowserWindow} = require('electron');
+
+require('./handlers/window');
+require('./handlers/about');
 
 const isDev = app.isPackaged ? false : require('electron-is-dev');
 
@@ -35,49 +37,7 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
-  createWindow();
-
-  ipcMain.on('closeWindow', () => {
-    mainWindow?.close();
-  });
-
-  ipcMain.on('minimizeWindow', () => {
-    mainWindow?.minimize();
-  });
-
-  ipcMain.on('maximizeWindow', () => {
-    if (mainWindow?.isMaximized()) {
-      mainWindow?.unmaximize();
-    } else {
-      mainWindow?.maximize();
-    }
-  });
-
-  ipcMain.handle('getArchInfo', () => {
-    return process.arch;
-  });
-
-  ipcMain.handle('getAppVersion', () => {
-    return app.getVersion();
-  });
-
-  ipcMain.handle('getElectronVersion', () => {
-    return process.versions.electron;
-  });
-
-  ipcMain.handle('getNodeVersion', () => {
-    return process.versions.node;
-  });
-
-  ipcMain.handle('getV8Version', () => {
-    return process.versions.v8;
-  });
-
-  ipcMain.handle('getOsInfo', () => {
-    return `${os.type()} ${os.arch()} ${os.release()}`;
-  });
-});
+app.whenReady().then(() => createWindow());
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
