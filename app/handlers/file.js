@@ -1,5 +1,8 @@
 const path = require('path');
 const {app, BrowserWindow, ipcMain, dialog} = require('electron');
+const {QvdFile} = require('../lib/qvd');
+
+let currentFile = null;
 
 app.whenReady().then(() => {
   ipcMain.handle('openFile', async (event) => {
@@ -19,16 +22,35 @@ app.whenReady().then(() => {
 
     currentWindow.webContents.send('openingFile', {path: filePath, name: path.basename(filePath)});
 
-    // TODO Replace timeout with actual file reading logic
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      currentFile = new QvdFile(filePath);
+      await currentFile.load();
 
-    currentWindow.webContents.send('openedFile', {path: filePath, name: path.basename(filePath)});
+      currentWindow.webContents.send('openedFile', {
+        path: filePath,
+        name: path.basename(filePath),
+        table: currentFile.getTable(),
+      });
 
-    return filePath;
+      return filePath;
+    } catch (err) {
+      console.error(err);
+
+      currentWindow.webContents.send('openingFileFailed', {
+        path: filePath,
+        name: path.basename(filePath),
+        error: err,
+      });
+
+      return null;
+    }
   });
 
   ipcMain.on('closeFile', (event) => {
     const currentWindow = BrowserWindow.fromId(event.frameId);
+
+    currentFile = null;
+
     currentWindow.webContents.send('closedFile');
   });
 });

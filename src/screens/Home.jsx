@@ -1,6 +1,6 @@
 import React from 'react';
 import BorderTemplate from '../components/templates/BorderTemplate';
-import DataView from '../components/organisms/file/DataView';
+import FileExplorer from '../components/organisms/file/FileExplorer';
 
 /**
  * The landing page of the application.
@@ -10,7 +10,7 @@ import DataView from '../components/organisms/file/DataView';
 export default function Home() {
   return (
     <BorderTemplate>
-      <DataView />
+      <FileExplorer />
     </BorderTemplate>
   );
 }
