@@ -49,7 +49,7 @@ export default function QvdView() {
       </div>
       <div
         className={
-          'flex flex-col grow h-0 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-200'
+          'flex flex-col grow h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-200'
         }
       >
         {fileName ? (

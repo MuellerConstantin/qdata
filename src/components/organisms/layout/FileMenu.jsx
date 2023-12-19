@@ -1,4 +1,4 @@
-import React, {Fragment, useState} from 'react';
+import React, {Fragment, useState, useEffect} from 'react';
 import {Menu, Transition} from '@headlessui/react';
 import {usePopper} from 'react-popper';
 
@@ -8,6 +8,18 @@ import {usePopper} from 'react-popper';
  * @return {*} The component
  */
 export default function FileMenu() {
+  const [fileOpen, setFileOpen] = useState(false);
+
+  useEffect(() => {
+    window.electron.ipc.on('openedFile', () => {
+      setFileOpen(true);
+    });
+
+    window.electron.ipc.on('closedFile', () => {
+      setFileOpen(false);
+    });
+  }, []);
+
   const [popupButtonElement, setPopupButtonElement] = useState();
   const [popupDialogElement, setPopupDialogElement] = useState();
   const {styles, attributes} = usePopper(popupButtonElement, popupDialogElement, {
@@ -62,6 +74,19 @@ export default function FileMenu() {
                       onClick={() => window.electron.ipc.invoke('openFile')}
                     >
                       Open File...
+                    </button>
+                  )}
+                </Menu.Item>
+                <Menu.Item>
+                  {({active}) => (
+                    <button
+                      className={`${
+                        active ? 'bg-green-600 text-white' : 'text-gray-800'
+                      } group flex w-full items-center h-8 px-4 text-sm disabled:opacity-50`}
+                      onClick={() => window.electron.ipc.send('closeFile')}
+                      disabled={!fileOpen}
+                    >
+                      Close File
                     </button>
                   )}
                 </Menu.Item>

@@ -7,13 +7,13 @@ require('./handlers/file');
 
 const isDev = app.isPackaged ? false : require('electron-is-dev');
 
-let mainWindow;
+const windows = new Set();
 
 /**
  * Creates the main window.
  */
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  newWindow = new BrowserWindow({
     width: 800,
     height: 600,
     minWidth: 600,
@@ -29,13 +29,15 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
+  newWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
 
   if (isDev) {
-    mainWindow.webContents.on('did-frame-finish-load', () => {
-      mainWindow.webContents.openDevTools({mode: 'detach'});
+    newWindow.webContents.on('did-frame-finish-load', () => {
+      newWindow.webContents.openDevTools({mode: 'detach'});
     });
   }
+
+  windows.add(newWindow);
 }
 
 app.whenReady().then(() => createWindow());
