@@ -20,6 +20,17 @@ export default function FileMenu() {
     });
   }, []);
 
+  useEffect(() => {
+    const handleCtrlO = (event) => {
+      if (event.ctrlKey && event.code === 'KeyO') {
+        window.electron.ipc.invoke('openFile');
+      }
+    };
+
+    window.addEventListener('keydown', handleCtrlO);
+    return () => window.removeEventListener('keydown', handleCtrlO);
+  }, []);
+
   const [popupButtonElement, setPopupButtonElement] = useState();
   const [popupDialogElement, setPopupDialogElement] = useState();
   const {styles, attributes} = usePopper(popupButtonElement, popupDialogElement, {
@@ -60,7 +71,9 @@ export default function FileMenu() {
           >
             <Menu.Items
               ref={setPopupDialogElement}
-              className={'w-56 bg-white shadow-lg ring-1 ring-gray-800/5 focus:outline-none divide-y divide-gray-300'}
+              className={
+                'w-56 bg-white shadow-lg ring-1 ring-gray-800/5 focus:outline-none divide-y divide-gray-300 z-50'
+              }
               style={styles.popper}
               {...attributes.popper}
             >
@@ -70,10 +83,11 @@ export default function FileMenu() {
                     <button
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
-                      } group flex w-full items-center h-8 px-4 text-sm`}
+                      } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
                       onClick={() => window.electron.ipc.invoke('openFile')}
                     >
-                      Open File...
+                      <span className="truncate">Open File...</span>
+                      <span>Ctrl+O</span>
                     </button>
                   )}
                 </Menu.Item>
@@ -86,7 +100,7 @@ export default function FileMenu() {
                       onClick={() => window.electron.ipc.send('closeFile')}
                       disabled={!fileOpen}
                     >
-                      Close File
+                      <span className="truncate">Close File</span>
                     </button>
                   )}
                 </Menu.Item>
@@ -100,7 +114,7 @@ export default function FileMenu() {
                       } group flex w-full items-center h-8 px-4 text-sm`}
                       onClick={() => window.electron.ipc.send('closeWindow')}
                     >
-                      Exit
+                      <span className="truncate">Exist</span>
                     </button>
                   )}
                 </Menu.Item>

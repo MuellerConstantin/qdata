@@ -2,22 +2,28 @@ const {app, BrowserWindow, ipcMain} = require('electron');
 
 app.whenReady().then(() => {
   ipcMain.on('closeWindow', () => {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
-    mainWindow?.close();
+    const currentWindow = BrowserWindow.getAllWindows()[0];
+    currentWindow.close();
   });
 
   ipcMain.on('minimizeWindow', () => {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
-    mainWindow?.minimize();
+    const currentWindow = BrowserWindow.getAllWindows()[0];
+    currentWindow.minimize();
   });
 
   ipcMain.on('maximizeWindow', () => {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
+    const currentWindow = BrowserWindow.getAllWindows()[0];
 
-    if (mainWindow?.isMaximized()) {
-      mainWindow?.unmaximize();
+    if (currentWindow.isMaximized()) {
+      currentWindow.unmaximize();
     } else {
-      mainWindow?.maximize();
+      currentWindow.maximize();
     }
+  });
+
+  ipcMain.on('triggerCopyToClipboard', () => {
+    const currentWindow = BrowserWindow.getAllWindows()[0];
+
+    currentWindow.webContents.sendInputEvent({type: 'keyDown', keyCode: 'c', modifiers: ['control']});
   });
 });

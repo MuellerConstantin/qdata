@@ -52,7 +52,9 @@ export default function HelpMenu() {
             >
               <Menu.Items
                 ref={setPopupDialogElement}
-                className={'w-56 bg-white shadow-lg ring-1 ring-gray-800/5 focus:outline-none divide-y divide-gray-300'}
+                className={
+                  'w-56 bg-white shadow-lg ring-1 ring-gray-800/5 focus:outline-none divide-y divide-gray-300 z-50'
+                }
                 style={styles.popper}
                 {...attributes.popper}
               >
@@ -65,7 +67,7 @@ export default function HelpMenu() {
                         } group flex w-full items-center h-8 px-4 text-sm`}
                         onClick={() => setShowAboutDialog(true)}
                       >
-                        About
+                        <span className="truncate">About</span>
                       </button>
                     )}
                   </Menu.Item>

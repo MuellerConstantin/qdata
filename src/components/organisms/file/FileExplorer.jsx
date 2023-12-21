@@ -46,7 +46,7 @@ export default function FileExplorer() {
           <div
             className={
               'bg-white rounded-t flex items-center justify-center w-fit h-8 max-w-[250px] ' +
-              'px-2 space-x-2 border-b-2 border-b-green-600 border-t border-l border-r'
+              'px-2 space-x-2 border-b-2 border-b-green-600 border-t border-l border-r select-none'
             }
           >
             <span className="truncate text-sm">{fileName}</span>

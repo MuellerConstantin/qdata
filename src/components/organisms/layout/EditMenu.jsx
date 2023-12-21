@@ -48,7 +48,9 @@ export default function EditMenu() {
           >
             <Menu.Items
               ref={setPopupDialogElement}
-              className={'w-56 bg-white shadow-lg ring-1 ring-gray-800/5 focus:outline-none divide-y divide-gray-300'}
+              className={
+                'w-56 bg-white shadow-lg ring-1 ring-gray-800/5 focus:outline-none divide-y divide-gray-300  z-50'
+              }
               style={styles.popper}
               {...attributes.popper}
             >
@@ -58,20 +60,11 @@ export default function EditMenu() {
                     <button
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
-                      } group flex w-full items-center h-8 px-4 text-sm`}
+                      } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
+                      onClick={() => window.electron.ipc.send('triggerCopyToClipboard')}
                     >
-                      Copy
-                    </button>
-                  )}
-                </Menu.Item>
-                <Menu.Item>
-                  {({active}) => (
-                    <button
-                      className={`${
-                        active ? 'bg-green-600 text-white' : 'text-gray-800'
-                      } group flex w-full items-center h-8 px-4 text-sm`}
-                    >
-                      Find
+                      <span className="truncate">Copy</span>
+                      <span>Ctrl+C</span>
                     </button>
                   )}
                 </Menu.Item>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import PropTypes from 'prop-types';
 import {TableVirtuoso} from 'react-virtuoso';
 
@@ -6,7 +6,7 @@ const TableWrapper = React.forwardRef((props, ref) => (
   <div
     className={
       'relative h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-gray-600 ' +
-      'scrollbar-track-gray-200 border'
+      'scrollbar-track-gray-200 border select-none'
     }
     {...props}
     ref={ref}
@@ -16,10 +16,18 @@ const TableWrapper = React.forwardRef((props, ref) => (
 TableWrapper.displayName = 'TableWrapper';
 
 const Table = (props) => (
-  <table className="w-full text-sm text-left text-gray-800" {...props} style={{borderCollapse: 'separate'}} />
+  <table
+    className="w-full text-sm text-left text-gray-800 table-auto border-spacing-0"
+    {...props}
+    style={{borderCollapse: 'separate'}}
+  />
 );
 
-const TableHead = (props) => <thead className="text-gray-800 bg-gray-100 font-semibold w-full" {...props} />;
+const TableHead = React.forwardRef((props, ref) => (
+  <thead className="text-gray-800 bg-gray-100 font-semibold w-full" {...props} ref={ref} />
+));
+
+TableHead.displayName = 'TableHead';
 
 const TableRow = (props) => <tr className="bg-white border-b hover:bg-gray-50" {...props} />;
 
@@ -29,6 +37,27 @@ const TableRow = (props) => <tr className="bg-white border-b hover:bg-gray-50" {
  * @return {*} The component
  */
 export default function TableView({table}) {
+  const [selected, _setSelected] = useState(null);
+  const selectedRef = useRef(selected);
+
+  const setSelected = useCallback((value) => {
+    selectedRef.current = value;
+    _setSelected(value);
+  }, []);
+
+  useEffect(() => {
+    const handleCtrlC = (event) => {
+      if (event.ctrlKey && event.code === 'KeyC' && selectedRef.current) {
+        const [row, column] = selectedRef.current;
+        const value = table.data[row][column];
+        navigator.clipboard.writeText(value);
+      }
+    };
+
+    window.addEventListener('keydown', handleCtrlC);
+    return () => window.removeEventListener('keydown', handleCtrlC);
+  }, []);
+
   const TableScrollSeekPlaceholder = (props) => {
     return (
       <tr {...props}>
@@ -64,11 +93,17 @@ export default function TableView({table}) {
           ))}
         </tr>
       )}
-      itemContent={(index, row) => (
+      itemContent={(rowIndex, row) => (
         <>
-          {row.map((cell, cellIndex) => (
-            <td key={cellIndex} className="px-4 py-2">
-              {cell}
+          {row.map((value, columnIndex) => (
+            <td
+              key={columnIndex}
+              className={`px-4 py-2 ${
+                selected && rowIndex === selected[0] && columnIndex === selected[1] ? 'bg-gray-200' : ''
+              }`}
+              onClick={() => setSelected([rowIndex, columnIndex])}
+            >
+              {value}
             </td>
           ))}
         </>
