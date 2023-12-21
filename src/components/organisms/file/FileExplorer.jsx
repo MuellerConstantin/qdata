@@ -51,10 +51,10 @@ export default function FileExplorer() {
           >
             <span className="truncate text-sm">{fileName}</span>
             <button
-              className="text-gray-800 hover:text-gray-600 focus:outline-none"
+              className="text-gray-800 hover:text-gray-600 focus:outline-none flex items-center justify-center"
               onClick={() => window.electron.ipc.send('closeFile')}
             >
-              <FontAwesomeIcon icon={faTimes} />
+              <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
             </button>
           </div>
         )}
