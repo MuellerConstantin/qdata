@@ -83,6 +83,32 @@ export default function FileMenu() {
                     <button
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
+                      } group flex w-full items-center h-8 px-4 text-sm disabled:opacity-50`}
+                      onClick={() => window.electron.ipc.send('newWindow')}
+                    >
+                      <span className="truncate">New Window</span>
+                    </button>
+                  )}
+                </Menu.Item>
+                <Menu.Item>
+                  {({active}) => (
+                    <button
+                      className={`${
+                        active ? 'bg-green-600 text-white' : 'text-gray-800'
+                      } group flex w-full items-center h-8 px-4 text-sm disabled:opacity-50`}
+                      onClick={() => window.electron.ipc.send('closeWindow')}
+                    >
+                      <span className="truncate">Close Window</span>
+                    </button>
+                  )}
+                </Menu.Item>
+              </div>
+              <div className="pb-2">
+                <Menu.Item>
+                  {({active}) => (
+                    <button
+                      className={`${
+                        active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
                       onClick={() => window.electron.ipc.invoke('openFile')}
                     >
@@ -91,6 +117,7 @@ export default function FileMenu() {
                     </button>
                   )}
                 </Menu.Item>
+
                 <Menu.Item>
                   {({active}) => (
                     <button
@@ -112,9 +139,9 @@ export default function FileMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm`}
-                      onClick={() => window.electron.ipc.send('closeWindow')}
+                      onClick={() => window.electron.ipc.send('exitApp')}
                     >
-                      <span className="truncate">Exist</span>
+                      <span className="truncate">Exit</span>
                     </button>
                   )}
                 </Menu.Item>

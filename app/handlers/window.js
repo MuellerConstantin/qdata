@@ -1,18 +1,20 @@
 const {app, BrowserWindow, ipcMain} = require('electron');
 
 app.whenReady().then(() => {
-  ipcMain.on('closeWindow', () => {
-    const currentWindow = BrowserWindow.getAllWindows()[0];
+  ipcMain.on('exitApp', () => app.quit());
+
+  ipcMain.on('closeWindow', (event) => {
+    const currentWindow = BrowserWindow.fromWebContents(event.sender);
     currentWindow.close();
   });
 
-  ipcMain.on('minimizeWindow', () => {
-    const currentWindow = BrowserWindow.getAllWindows()[0];
+  ipcMain.on('minimizeWindow', (event) => {
+    const currentWindow = BrowserWindow.fromWebContents(event.sender);
     currentWindow.minimize();
   });
 
-  ipcMain.on('maximizeWindow', () => {
-    const currentWindow = BrowserWindow.getAllWindows()[0];
+  ipcMain.on('maximizeWindow', (event) => {
+    const currentWindow = BrowserWindow.fromWebContents(event.sender);
 
     if (currentWindow.isMaximized()) {
       currentWindow.unmaximize();
@@ -21,8 +23,8 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.on('triggerCopyToClipboard', () => {
-    const currentWindow = BrowserWindow.getAllWindows()[0];
+  ipcMain.on('triggerCopyToClipboard', (event) => {
+    const currentWindow = BrowserWindow.fromWebContents(event.sender);
 
     currentWindow.webContents.sendInputEvent({type: 'keyDown', keyCode: 'c', modifiers: ['control']});
   });

@@ -1,12 +1,17 @@
 const path = require('path');
 const {app, BrowserWindow, ipcMain, dialog} = require('electron');
+const {createWindow} = require('../lib/window');
 const {QvdFile} = require('../lib/qvd');
 
 let currentFile = null;
 
 app.whenReady().then(() => {
+  ipcMain.on('newWindow', async (event) => {
+    createWindow();
+  });
+
   ipcMain.handle('openFile', async (event) => {
-    const currentWindow = BrowserWindow.fromId(event.frameId);
+    const currentWindow = BrowserWindow.fromWebContents(event.sender);
 
     const {canceled, filePaths} = await dialog.showOpenDialog({
       properties: ['openFile'],
@@ -47,7 +52,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on('closeFile', (event) => {
-    const currentWindow = BrowserWindow.fromId(event.frameId);
+    const currentWindow = BrowserWindow.fromWebContents(event.sender);
 
     currentFile = null;
 
