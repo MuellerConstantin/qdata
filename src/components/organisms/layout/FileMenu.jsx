@@ -31,6 +31,17 @@ export default function FileMenu() {
     return () => window.removeEventListener('keydown', handleCtrlO);
   }, []);
 
+  useEffect(() => {
+    const handleCtrlN = (event) => {
+      if (event.ctrlKey && event.code === 'KeyN') {
+        window.electron.ipc.send('newWindow');
+      }
+    };
+
+    window.addEventListener('keydown', handleCtrlN);
+    return () => window.removeEventListener('keydown', handleCtrlN);
+  }, []);
+
   const [popupButtonElement, setPopupButtonElement] = useState();
   const [popupDialogElement, setPopupDialogElement] = useState();
   const {styles, attributes} = usePopper(popupButtonElement, popupDialogElement, {
@@ -83,10 +94,11 @@ export default function FileMenu() {
                     <button
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
-                      } group flex w-full items-center h-8 px-4 text-sm disabled:opacity-50`}
+                      } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
                       onClick={() => window.electron.ipc.send('newWindow')}
                     >
                       <span className="truncate">New Window</span>
+                      <span>Ctrl+N</span>
                     </button>
                   )}
                 </Menu.Item>
@@ -138,10 +150,11 @@ export default function FileMenu() {
                     <button
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
-                      } group flex w-full items-center h-8 px-4 text-sm`}
+                      } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
                       onClick={() => window.electron.ipc.send('exitApp')}
                     >
                       <span className="truncate">Exit</span>
+                      <span>Alt+F4</span>
                     </button>
                   )}
                 </Menu.Item>

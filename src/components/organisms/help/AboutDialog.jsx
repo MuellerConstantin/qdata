@@ -64,7 +64,7 @@ export default function AboutDialog({onClose, isOpen}) {
                   'scrollbar-track-gray-200 p-4 flex flex-col items-center space-y-4'
                 }
               >
-                <img className="h-12 w-auto" src={LogoTextDark} alt="QData Logo" />
+                <img className="h-12 w-auto drag-none" src={LogoTextDark} alt="QData Logo" />
                 <div className="space-y-1 text-center w-full">
                   <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-center">
                     About QData
