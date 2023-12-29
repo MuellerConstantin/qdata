@@ -6,7 +6,7 @@ import HelpMenu from './HelpMenu';
 /**
  * The default window menu bar. Contains the menu items and search bar.
  *
- * @return {*} The component
+ * @return {*} The component.
  */
 export default function MenuBar() {
   return (

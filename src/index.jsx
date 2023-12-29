@@ -1,7 +1,9 @@
 import React from 'react';
 import * as ReactDOM from 'react-dom/client';
 import {HashRouter} from 'react-router-dom';
+import {Provider} from 'react-redux';
 import reportWebVitals from './reportWebVitals';
+import store from './store';
 import App from './App';
 
 import './styles/index.css';
@@ -9,9 +11,11 @@ import './styles/index.css';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <HashRouter>
-      <App />
-    </HashRouter>
+    <Provider store={store}>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </Provider>
   </React.StrictMode>,
 );
 

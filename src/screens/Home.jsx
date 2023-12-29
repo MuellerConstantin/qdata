@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import {useDispatch} from 'react-redux';
 import {Tab} from '@headlessui/react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faTimes} from '@fortawesome/free-solid-svg-icons';
@@ -6,13 +7,16 @@ import BorderTemplate from '../components/templates/BorderTemplate';
 import FileView from '../components/organisms/file/FileView';
 import BackgroundView from '../components/organisms/file/BackgroundView';
 import GettingStartedView from '../components/organisms/file/GettingStartedView';
+import filesSlice from '../store/slices/files';
 
 /**
  * The landing page of the application.
  *
- * @return {*} The component
+ * @return {*} The component.
  */
 export default function Home() {
+  const dispatch = useDispatch();
+
   const [selectedTab, setSelectedTab] = useState(0);
   const [showGettingStarted, setShowGettingStarted] = useState(true);
   const [fileName, setFileName] = useState(null);
@@ -21,6 +25,14 @@ export default function Home() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    window.electron.ipc
+      .invoke('getRecentFiles')
+      .then((recentFiles) => dispatch(filesSlice.actions.setRecentFiles(recentFiles)));
+
+    window.electron.ipc.on('recentFilesChanged', (recentFiles) =>
+      dispatch(filesSlice.actions.setRecentFiles(recentFiles)),
+    );
+
     window.electron.ipc.on('openingFile', ({name}) => {
       setShowGettingStarted(false);
       setLoading(true);

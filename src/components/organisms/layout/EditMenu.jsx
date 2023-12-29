@@ -5,7 +5,7 @@ import {usePopper} from 'react-popper';
 /**
  * The edit menu with edit operations.
  *
- * @return {*} The component
+ * @return {*} The component.
  */
 export default function EditMenu() {
   const [popupButtonElement, setPopupButtonElement] = useState();

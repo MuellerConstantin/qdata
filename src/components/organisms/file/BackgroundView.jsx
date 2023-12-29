@@ -5,7 +5,7 @@ import Watermark from '../../../assets/images/watermark.svg';
 /**
  * This view is shown when there is no file opened.
  *
- * @return {*} The component
+ * @return {*} The component.
  */
 export default function BackgroundView() {
   return (

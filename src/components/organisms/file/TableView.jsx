@@ -36,7 +36,7 @@ const TableRow = (props) => <tr className="bg-white border-b hover:bg-gray-50" {
 /**
  * Component for viewing tabular data.
  *
- * @return {*} The component
+ * @return {*} The component.
  */
 export default function TableView({table}) {
   const [filter, _setFilter] = useState([]);

@@ -6,7 +6,7 @@ import AboutDialog from '../help/AboutDialog';
 /**
  * The help menu with help operations.
  *
- * @return {*} The component
+ * @return {*} The component.
  */
 export default function HelpMenu() {
   const [showAboutDialog, setShowAboutDialog] = useState(false);

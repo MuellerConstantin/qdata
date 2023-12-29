@@ -7,7 +7,7 @@ import LogoDark from '../../../assets/images/logo-dark.svg';
 /**
  * The default window title bar. Contains the logo and window controls.
  *
- * @return {*} The component
+ * @return {*} The component.
  */
 export default function TitleBar() {
   return (

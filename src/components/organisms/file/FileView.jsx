@@ -8,7 +8,7 @@ import TableView from './TableView';
 /**
  * Component for viewing the contents of QVD files.
  *
- * @return {*} The component
+ * @return {*} The component.
  */
 export default function FileView({loading, error, table, fileName}) {
   return (
