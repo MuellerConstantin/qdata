@@ -1,11 +1,15 @@
-const {app, BrowserWindow} = require('electron');
+const {app, BrowserWindow, ipcMain} = require('electron');
 const {createWindow} = require('./lib/window');
 
 require('./handlers/window');
 require('./handlers/about');
+require('./handlers/edit');
 require('./handlers/file');
 
-app.whenReady().then(() => createWindow());
+app.whenReady().then(() => {
+  createWindow();
+  ipcMain.on('app:exit', () => app.quit());
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

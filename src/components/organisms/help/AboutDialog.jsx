@@ -19,12 +19,14 @@ export default function AboutDialog({onClose, isOpen}) {
   const [osInfo, setOsInfo] = useState(null);
 
   useEffect(() => {
-    window.electron.ipc.invoke('getAppVersion').then((appVersion) => setAppVersion(appVersion));
-    window.electron.ipc.invoke('getArchInfo').then((archInfo) => setArchInfo(archInfo));
-    window.electron.ipc.invoke('getElectronVersion').then((electronVersion) => setElectronVersion(electronVersion));
-    window.electron.ipc.invoke('getNodeVersion').then((nodeVersion) => setNodeVersion(nodeVersion));
-    window.electron.ipc.invoke('getV8Version').then((v8Version) => setV8Version(v8Version));
-    window.electron.ipc.invoke('getOsInfo').then((osInfo) => setOsInfo(osInfo));
+    window.electron.ipc.invoke('about:getAppVersion').then((appVersion) => setAppVersion(appVersion));
+    window.electron.ipc.invoke('about:getArchInfo').then((archInfo) => setArchInfo(archInfo));
+    window.electron.ipc
+      .invoke('about:getElectronVersion')
+      .then((electronVersion) => setElectronVersion(electronVersion));
+    window.electron.ipc.invoke('about:getNodeVersion').then((nodeVersion) => setNodeVersion(nodeVersion));
+    window.electron.ipc.invoke('about:getV8Version').then((v8Version) => setV8Version(v8Version));
+    window.electron.ipc.invoke('about:getOsInfo').then((osInfo) => setOsInfo(osInfo));
   }, []);
 
   return (

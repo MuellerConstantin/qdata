@@ -6,6 +6,55 @@ import Button from '../../atoms/Button';
 import TableView from './TableView';
 
 /**
+ * Renders an error message.
+ *
+ * @param {string} err The error.
+ * @return {*} The component.
+ */
+function renderError(err) {
+  switch (err) {
+    case 'error:parsingFileFailed': {
+      return (
+        <>
+          <FontAwesomeIcon icon={faExclamationTriangle} className="w-12 h-12 text-amber-500" />
+          <div className="text-center">
+            The file is not displayed in the explorer because it is either corrupted or uses an unsupported QVD
+            encoding.
+          </div>
+          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close')}>
+            Close File
+          </Button>
+        </>
+      );
+    }
+    case 'error:fileNotFound': {
+      return (
+        <>
+          <FontAwesomeIcon icon={faExclamationTriangle} className="w-12 h-12 text-amber-500" />
+          <div className="text-center">
+            The path to the file does not exist anymore. The file might have been moved or deleted.
+          </div>
+          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close')}>
+            Close File
+          </Button>
+        </>
+      );
+    }
+    default: {
+      return (
+        <>
+          <FontAwesomeIcon icon={faExclamationTriangle} className="w-12 h-12 text-amber-500" />
+          <div className="text-center">An unknown error occurred while opening the file. Please try again.</div>
+          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close')}>
+            Close File
+          </Button>
+        </>
+      );
+    }
+  }
+}
+
+/**
  * Component for viewing the contents of QVD files.
  *
  * @return {*} The component.
@@ -44,16 +93,7 @@ export default function FileView({loading, error, table, fileName}) {
         </div>
       ) : error ? (
         <div className="flex justify-center items-center h-full w-full space-x-2 p-4">
-          <div className="flex flex-col items-center max-w-[500px] space-y-4">
-            <FontAwesomeIcon icon={faExclamationTriangle} className="w-12 h-12 text-amber-500" />
-            <div className="text-center">
-              The file is not displayed in the explorer because it is either corrupted or uses an unsupported QVD
-              encoding.
-            </div>
-            <Button className="!px-8" onClick={() => window.electron.ipc.send('closeFile')}>
-              Close File
-            </Button>
-          </div>
+          <div className="flex flex-col items-center max-w-[500px] space-y-4">{renderError(error)}</div>
         </div>
       ) : (
         <TableView table={table} />

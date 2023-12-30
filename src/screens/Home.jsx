@@ -26,31 +26,36 @@ export default function Home() {
 
   useEffect(() => {
     window.electron.ipc
-      .invoke('getRecentFiles')
+      .invoke('file:getRecentFiles')
       .then((recentFiles) => dispatch(filesSlice.actions.setRecentFiles(recentFiles)));
 
-    window.electron.ipc.on('recentFilesChanged', (recentFiles) =>
+    window.electron.ipc.on('file:recentFilesChanged', (recentFiles) =>
       dispatch(filesSlice.actions.setRecentFiles(recentFiles)),
     );
 
-    window.electron.ipc.on('openingFile', ({name}) => {
+    window.electron.ipc.on('file:opening', ({name}) => {
       setShowGettingStarted(false);
       setLoading(true);
       setError(null);
       setFileName(name);
     });
 
-    window.electron.ipc.on('openingFileFailed', ({error}) => {
+    window.electron.ipc.on('error:parsingFileFailed', () => {
       setLoading(false);
-      setError(error);
+      setError('error:parsingFileFailed');
     });
 
-    window.electron.ipc.on('openedFile', ({table}) => {
+    window.electron.ipc.on('error:fileNotFound', () => {
+      setLoading(false);
+      setError('error:fileNotFound');
+    });
+
+    window.electron.ipc.on('file:opened', ({table}) => {
       setLoading(false);
       setTable(table);
     });
 
-    window.electron.ipc.on('closedFile', () => {
+    window.electron.ipc.on('file:closed', () => {
       setLoading(false);
       setFileName(null);
       setError(null);
@@ -95,7 +100,7 @@ export default function Home() {
                   <div
                     className="text-gray-800 hover:text-gray-600 focus:outline-none flex items-center justify-center"
                     onClick={() => {
-                      window.electron.ipc.send('closeFile');
+                      window.electron.ipc.send('file:close');
                       setSelectedTab(0);
                     }}
                   >

@@ -9,13 +9,6 @@ function createNewWindow() {
 }
 
 /**
- * Quits the app immediately.
- */
-function exitApp() {
-  app.quit();
-}
-
-/**
  * Closes the given window.
  *
  * @param {Electron.WebContents} webContents The web contents of the window to close.
@@ -50,22 +43,9 @@ function maximizeWindow(webContents) {
   }
 }
 
-/**
- * Triggers the keyboard shortcut for copying to clipboard in the given window.
- *
- * @param {Electron.WebContents} webContents The web contents of the window to trigger the shortcut in.
- */
-function triggerCopyToClipboard(webContents) {
-  const currentWindow = BrowserWindow.fromWebContents(webContents);
-
-  currentWindow.webContents.sendInputEvent({type: 'keyDown', keyCode: 'c', modifiers: ['control']});
-}
-
 app.whenReady().then(() => {
-  ipcMain.on('newWindow', () => createNewWindow());
-  ipcMain.on('exitApp', () => exitApp());
-  ipcMain.on('closeWindow', (event) => closeWindow(event.sender));
-  ipcMain.on('minimizeWindow', (event) => minimizeWindow(event.sender));
-  ipcMain.on('maximizeWindow', (event) => maximizeWindow(event.sender));
-  ipcMain.on('triggerCopyToClipboard', (event) => triggerCopyToClipboard(event.sender));
+  ipcMain.on('window:new', () => createNewWindow());
+  ipcMain.on('window:close', (event) => closeWindow(event.sender));
+  ipcMain.on('window:minimize', (event) => minimizeWindow(event.sender));
+  ipcMain.on('window:maximize', (event) => maximizeWindow(event.sender));
 });

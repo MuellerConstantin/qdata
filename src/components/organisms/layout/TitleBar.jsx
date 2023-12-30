@@ -24,7 +24,7 @@ export default function TitleBar() {
             className="flex items-center justify-center px-4 hover:bg-gray-300 fill-slate-800"
             draggable="false"
             onClick={() => {
-              window.electron.ipc.send('minimizeWindow');
+              window.electron.ipc.send('window:minimize');
             }}
           >
             <svg width="12" height="12" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg">
@@ -36,7 +36,7 @@ export default function TitleBar() {
             className="flex items-center justify-center px-4 hover:bg-gray-300 fill-slate-800"
             draggable="false"
             onClick={() => {
-              window.electron.ipc.send('maximizeWindow');
+              window.electron.ipc.send('window:maximize');
             }}
           >
             <svg width="12" height="12" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg">
@@ -48,7 +48,7 @@ export default function TitleBar() {
             className="flex items-center justify-center px-4 hover:bg-red-500 hover:fill-white fill-slate-800"
             draggable="false"
             onClick={() => {
-              window.electron.ipc.send('closeWindow');
+              window.electron.ipc.send('window:close');
             }}
           >
             <svg width="12" height="12" viewBox="0 0 320 512" xmlns="http://www.w3.org/2000/svg">

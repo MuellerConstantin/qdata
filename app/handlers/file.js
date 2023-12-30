@@ -26,13 +26,13 @@ async function openFile(webContents) {
 
   const filePath = filePaths[0];
 
-  currentWindow.webContents.send('openingFile', {path: filePath, name: path.basename(filePath)});
+  currentWindow.webContents.send('file:opening', {path: filePath, name: path.basename(filePath)});
 
   try {
     currentFile = new QvdFile(filePath);
     await currentFile.load();
 
-    currentWindow.webContents.send('openedFile', {
+    currentWindow.webContents.send('file:opened', {
       path: filePath,
       name: path.basename(filePath),
       table: currentFile.getTable(),
@@ -44,7 +44,7 @@ async function openFile(webContents) {
   } catch (err) {
     console.error(err);
 
-    currentWindow.webContents.send('openingFileFailed', {
+    currentWindow.webContents.send('error:parsingFileFailed', {
       path: filePath,
       name: path.basename(filePath),
       error: err,
@@ -64,7 +64,7 @@ function closeFile(webContents) {
 
   currentFile = null;
 
-  currentWindow.webContents.send('closedFile');
+  currentWindow.webContents.send('file:closed');
 }
 
 /**
@@ -89,7 +89,36 @@ async function addRecentFile(filePath) {
   const recentFilesData = JSON.stringify([...recentFiles]);
   await fs.promises.writeFile(recentFilesPath, recentFilesData);
 
-  BrowserWindow.getAllWindows().forEach((window) => window.webContents.send('recentFilesChanged', [...recentFiles]));
+  BrowserWindow.getAllWindows().forEach((window) =>
+    window.webContents.send('file:recentFilesChanged', [...recentFiles]),
+  );
+}
+
+/**
+ * Removes a file from the list of recent files.
+ *
+ * @param {string} filePath The path of the file to remove.
+ */
+async function removeRecentFile(filePath) {
+  const recentFilesPath = path.join(app.getPath('userData'), 'recentFiles.json');
+
+  let recentFiles = null;
+
+  if (fs.existsSync(recentFilesPath)) {
+    const recentFilesData = await fs.promises.readFile(recentFilesPath);
+    recentFiles = new Set(JSON.parse(recentFilesData));
+  } else {
+    recentFiles = new Set();
+  }
+
+  recentFiles.delete(filePath);
+
+  const recentFilesData = JSON.stringify([...recentFiles]);
+  await fs.promises.writeFile(recentFilesPath, recentFilesData);
+
+  BrowserWindow.getAllWindows().forEach((window) =>
+    window.webContents.send('file:recentFilesChanged', [...recentFiles]),
+  );
 }
 
 /**
@@ -100,7 +129,7 @@ async function clearRecentFiles() {
 
   await fs.promises.writeFile(recentFilesPath, JSON.stringify([]));
 
-  BrowserWindow.getAllWindows().forEach((window) => window.webContents.send('recentFilesChanged', []));
+  BrowserWindow.getAllWindows().forEach((window) => window.webContents.send('file:recentFilesChanged', []));
 }
 
 /**
@@ -131,13 +160,19 @@ async function getRecentFiles() {
 async function openRecentFile(webContents, filePath) {
   const currentWindow = BrowserWindow.fromWebContents(webContents);
 
-  currentWindow.webContents.send('openingFile', {path: filePath, name: path.basename(filePath)});
+  currentWindow.webContents.send('file:opening', {path: filePath, name: path.basename(filePath)});
+
+  if (!fs.existsSync(filePath)) {
+    currentWindow.webContents.send('error:fileNotFound', {path: filePath, name: path.basename(filePath)});
+    await removeRecentFile(filePath);
+    return null;
+  }
 
   try {
     currentFile = new QvdFile(filePath);
     await currentFile.load();
 
-    currentWindow.webContents.send('openedFile', {
+    currentWindow.webContents.send('file:opened', {
       path: filePath,
       name: path.basename(filePath),
       table: currentFile.getTable(),
@@ -149,7 +184,7 @@ async function openRecentFile(webContents, filePath) {
   } catch (err) {
     console.error(err);
 
-    currentWindow.webContents.send('openingFileFailed', {
+    currentWindow.webContents.send('error:parsingFileFailed', {
       path: filePath,
       name: path.basename(filePath),
       error: err,
@@ -160,10 +195,10 @@ async function openRecentFile(webContents, filePath) {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle('openFile', (event) => openFile(event.sender));
-  ipcMain.on('closeFile', (event) => closeFile(event.sender));
-  ipcMain.on('addRecentFile', (event, path) => addRecentFile(path));
-  ipcMain.on('clearRecentFiles', () => clearRecentFiles());
-  ipcMain.handle('getRecentFiles', () => getRecentFiles());
-  ipcMain.handle('openRecentFile', (event, filePath) => openRecentFile(event.sender, filePath));
+  ipcMain.handle('file:open', (event) => openFile(event.sender));
+  ipcMain.on('file:close', (event) => closeFile(event.sender));
+  ipcMain.on('file:addRecentFile', (event, path) => addRecentFile(path));
+  ipcMain.on('file:clearRecentFiles', () => clearRecentFiles());
+  ipcMain.handle('file:getRecentFiles', () => getRecentFiles());
+  ipcMain.handle('file:openRecentFile', (event, filePath) => openRecentFile(event.sender, filePath));
 });

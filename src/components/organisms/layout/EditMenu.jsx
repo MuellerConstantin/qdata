@@ -61,7 +61,7 @@ export default function EditMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
-                      onClick={() => window.electron.ipc.send('triggerCopyToClipboard')}
+                      onClick={() => window.electron.ipc.send('edit:triggerCopyToClipboard')}
                     >
                       <span className="truncate">Copy</span>
                       <span>Ctrl+C</span>
