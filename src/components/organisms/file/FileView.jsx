@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faExclamationTriangle} from '@fortawesome/free-solid-svg-icons';
 import Button from '../../atoms/Button';
-import TableView from './TableView';
+import DataTable from './DataTable';
 
 /**
  * Renders an error message.
@@ -96,7 +96,7 @@ export default function FileView({loading, error, table, fileName}) {
           <div className="flex flex-col items-center max-w-[500px] space-y-4">{renderError(error)}</div>
         </div>
       ) : (
-        <TableView table={table} />
+        <DataTable table={table} />
       )}
     </div>
   );

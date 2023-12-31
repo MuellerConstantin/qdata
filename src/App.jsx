@@ -1,7 +1,7 @@
 import React from 'react';
 import {Routes, Route, Navigate} from 'react-router-dom';
 import TitleBar from './components/organisms/layout/TitleBar';
-import Home from './screens/Home';
+import Editor from './screens/Editor';
 
 /**
  * The application's root component.
@@ -16,8 +16,8 @@ export default function App() {
         className={'grow bg-white h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-200'}
       >
         <Routes>
-          <Route path="/" element={<Navigate to="/home" />} />
-          <Route path="/home" element={<Home />} />
+          <Route path="/" element={<Navigate to="/editor" />} />
+          <Route path="/editor" element={<Editor />} />
         </Routes>
       </div>
     </div>

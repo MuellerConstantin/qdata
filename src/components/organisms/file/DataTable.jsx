@@ -38,7 +38,7 @@ const TableRow = (props) => <tr className="bg-white border-b hover:bg-gray-50" {
  *
  * @return {*} The component.
  */
-export default function TableView({table}) {
+export default function DataTable({table}) {
   const [filter, _setFilter] = useState([]);
   const [selected, _setSelected] = useState(null);
   const selectedRef = useRef(selected);
@@ -171,7 +171,7 @@ export default function TableView({table}) {
   );
 }
 
-TableView.propTypes = {
+DataTable.propTypes = {
   table: PropTypes.shape({
     columns: PropTypes.arrayOf(PropTypes.string).isRequired,
     data: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.any)).isRequired,

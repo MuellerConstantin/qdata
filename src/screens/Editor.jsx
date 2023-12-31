@@ -5,8 +5,8 @@ import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faTimes} from '@fortawesome/free-solid-svg-icons';
 import BorderTemplate from '../components/templates/BorderTemplate';
 import FileView from '../components/organisms/file/FileView';
-import BackgroundView from '../components/organisms/file/BackgroundView';
-import GettingStartedView from '../components/organisms/file/GettingStartedView';
+import BackgroundView from '../components/organisms/layout/BackgroundView';
+import GettingStartedView from '../components/organisms/layout/GettingStartedView';
 import filesSlice from '../store/slices/files';
 
 /**
@@ -14,7 +14,7 @@ import filesSlice from '../store/slices/files';
  *
  * @return {*} The component.
  */
-export default function Home() {
+export default function Editor() {
   const dispatch = useDispatch();
 
   const [selectedTab, setSelectedTab] = useState(0);
