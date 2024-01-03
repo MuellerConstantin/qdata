@@ -1,6 +1,7 @@
 import React from 'react';
 import {Routes, Route, Navigate} from 'react-router-dom';
 import TitleBar from './components/organisms/layout/TitleBar';
+import StatusBar from './components/organisms/layout/StatusBar';
 import Editor from './screens/Editor';
 
 /**
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/editor" element={<Editor />} />
         </Routes>
       </div>
+      <StatusBar />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import {useDispatch} from 'react-redux';
 import {Tab} from '@headlessui/react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faTimes} from '@fortawesome/free-solid-svg-icons';
+import useStatus from '../hooks/useStatus';
 import BorderTemplate from '../components/templates/BorderTemplate';
 import FileView from '../components/organisms/file/FileView';
 import BackgroundView from '../components/organisms/layout/BackgroundView';
@@ -16,6 +17,8 @@ import filesSlice from '../store/slices/files';
  */
 export default function Editor() {
   const dispatch = useDispatch();
+
+  const {setLoading: setStatusLoading, setTotalColumns, setTotalRows} = useStatus();
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [showGettingStarted, setShowGettingStarted] = useState(true);
@@ -36,30 +39,37 @@ export default function Editor() {
     window.electron.ipc.on('file:opening', ({name}) => {
       setShowGettingStarted(false);
       setLoading(true);
+      setStatusLoading(true);
       setError(null);
       setFileName(name);
     });
 
     window.electron.ipc.on('error:parsingFileFailed', () => {
       setLoading(false);
+      setStatusLoading(false);
       setError('error:parsingFileFailed');
     });
 
     window.electron.ipc.on('error:fileNotFound', () => {
       setLoading(false);
+      setStatusLoading(false);
       setError('error:fileNotFound');
     });
 
     window.electron.ipc.on('file:opened', ({table}) => {
       setLoading(false);
+      setStatusLoading(false);
       setTable(table);
     });
 
     window.electron.ipc.on('file:closed', () => {
       setLoading(false);
+      setStatusLoading(false);
       setFileName(null);
       setError(null);
       setTable(null);
+      setTotalRows(null);
+      setTotalColumns(null);
     });
   }, []);
 

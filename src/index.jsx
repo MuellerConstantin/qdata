@@ -3,6 +3,7 @@ import * as ReactDOM from 'react-dom/client';
 import {HashRouter} from 'react-router-dom';
 import {Provider} from 'react-redux';
 import reportWebVitals from './reportWebVitals';
+import {StatusProvider} from './contexts/StatusContext';
 import store from './store';
 import App from './App';
 
@@ -12,9 +13,11 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <Provider store={store}>
-      <HashRouter>
-        <App />
-      </HashRouter>
+      <StatusProvider>
+        <HashRouter>
+          <App />
+        </HashRouter>
+      </StatusProvider>
     </Provider>
   </React.StrictMode>,
 );
