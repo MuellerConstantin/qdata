@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const {app, BrowserWindow, ipcMain, dialog} = require('electron');
-const {QvdFile} = require('../lib/qvd');
+const {QvdFile} = require('qvd4js');
 
 let currentFile = null;
 
@@ -29,8 +29,7 @@ async function openFile(webContents) {
   currentWindow.webContents.send('file:opening', {path: filePath, name: path.basename(filePath)});
 
   try {
-    currentFile = new QvdFile(filePath);
-    await currentFile.load();
+    currentFile = await QvdFile.load(filePath);
 
     currentWindow.webContents.send('file:opened', {
       path: filePath,

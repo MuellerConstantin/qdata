@@ -7,15 +7,20 @@
 ![](https://img.shields.io/badge/Electron.js-white?logo=electron&logoColor=#66ccff)
 ![](https://img.shields.io/badge/Qlik%20Sense-green?logo=qlik)
 
-## Table of Contents
+---
 
 - [Introduction](#introduction)
 - [License](#license)
   - [Forbidden](#forbidden)
 
+---
+
 ## Introduction
 
-QData is a program for viewing and editing Qlik View/Sense data files, so-called QVDs.
+QData is a program for viewing and editing Qlik View/Sense data files, so-called QVDs. This
+enables BI developers to view QVD files without having to load them into Qlik Sense via
+an ETL (Extract-Transform-Load) process. This saves time and resources. Therefor QData
+uses the QVD reader library [qvd4js](https://github.com/MuellerConstantin/qvd4js) internally.
 
 ## License
 
