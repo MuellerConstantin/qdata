@@ -168,8 +168,7 @@ async function openRecentFile(webContents, filePath) {
   }
 
   try {
-    currentFile = new QvdFile(filePath);
-    await currentFile.load();
+    currentFile = await QvdFile.load(filePath);
 
     currentWindow.webContents.send('file:opened', {
       path: filePath,
