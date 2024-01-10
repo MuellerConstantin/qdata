@@ -1,5 +1,8 @@
 const {app, BrowserWindow, ipcMain} = require('electron');
 const {createWindow} = require('./lib/window');
+const {WorkerHost} = require('./lib/worker');
+
+WorkerHost.getInstance('HOST').start();
 
 require('./handlers/window');
 require('./handlers/about');

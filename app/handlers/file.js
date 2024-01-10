@@ -1,9 +1,38 @@
 const path = require('path');
 const fs = require('fs');
+const {randomUUID} = require('crypto');
+const {fork} = require('child_process');
 const {app, BrowserWindow, ipcMain, dialog} = require('electron');
-const {QvdFile} = require('qvd4js');
+const {WorkerHost} = require('../lib/worker');
+const {QvdFileDeserializer} = require('../lib/qvd');
 
 let currentFile = null;
+
+/**
+ * Parses a QVD file in a worker process.
+ *
+ * @param {string} filePath The path of the file to parse.
+ * @return {Promise<any>} A promise that resolves when the file is parsed.
+ */
+async function parseFile(filePath) {
+  const workerId = `file-${randomUUID()}`;
+
+  /*
+   * Starts a worker process that loads the file and sends it back to the main process.
+   * Communication between the main process and the worker process is done via IPC. After
+   * the worker process started, it connects to the worker host.
+   */
+  const worker = fork(path.join(__dirname, '../workers/file.js'), [workerId, filePath]);
+
+  return new Promise((resolve, reject) => {
+    WorkerHost.getInstance().on('error', (err) => reject(err), workerId);
+
+    // Waits via IPC for the worker process to be done
+    WorkerHost.getInstance()
+      .join('done', workerId)
+      .then(({payload}) => resolve(QvdFileDeserializer.deserialize(payload)));
+  }).finally(() => worker.kill());
+}
 
 /**
  * Opens a file.
@@ -29,7 +58,7 @@ async function openFile(webContents) {
   currentWindow.webContents.send('file:opening', {path: filePath, name: path.basename(filePath)});
 
   try {
-    currentFile = await QvdFile.load(filePath);
+    currentFile = await parseFile(filePath);
 
     currentWindow.webContents.send('file:opened', {
       path: filePath,
@@ -168,7 +197,7 @@ async function openRecentFile(webContents, filePath) {
   }
 
   try {
-    currentFile = await QvdFile.load(filePath);
+    currentFile = await parseFile(filePath);
 
     currentWindow.webContents.send('file:opened', {
       path: filePath,
