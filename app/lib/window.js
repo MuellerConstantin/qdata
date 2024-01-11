@@ -1,6 +1,5 @@
 const path = require('path');
 const {app, BrowserWindow} = require('electron');
-const {default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS} = require('electron-devtools-installer');
 
 const isDev = app.isPackaged ? false : require('electron-is-dev');
 
@@ -31,6 +30,8 @@ function createWindow(windowOptions = {}) {
   newWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../../build/index.html')}`);
 
   if (isDev) {
+    const {default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS} = require('electron-devtools-installer');
+
     installExtension(REACT_DEVELOPER_TOOLS)
       .then((name) => console.log(`Added Extension:  ${name}`))
       .catch((err) => console.error('An error occurred: ', err));
