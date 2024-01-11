@@ -1,4 +1,5 @@
 const {QvdFile} = require('qvd4js');
+const ESSerializer = require('esserializer');
 const {WorkerClient} = require('../lib/worker');
 
 (async () => {
@@ -12,7 +13,8 @@ const {WorkerClient} = require('../lib/worker');
 
   try {
     const file = await QvdFile.load(filePath);
-    worker.emit('done', file);
+    const payload = ESSerializer.serialize(file);
+    worker.emit('done', payload);
   } catch (err) {
     console.error(`Error loading file '${filePath}' in worker '${clientId}'`);
     worker.emit('error', err);

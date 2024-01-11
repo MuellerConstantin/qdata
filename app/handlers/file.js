@@ -3,8 +3,9 @@ const fs = require('fs');
 const {randomUUID} = require('crypto');
 const {fork} = require('child_process');
 const {app, BrowserWindow, ipcMain, dialog} = require('electron');
+const {QvdFile, QvdSymbol} = require('qvd4js');
+const ESSerializer = require('esserializer');
 const {WorkerHost} = require('../lib/worker');
-const {QvdFileDeserializer} = require('../lib/qvd');
 
 let currentFile = null;
 
@@ -30,7 +31,10 @@ async function parseFile(filePath) {
     // Waits via IPC for the worker process to be done
     WorkerHost.getInstance()
       .join('done', workerId)
-      .then(({payload}) => resolve(QvdFileDeserializer.deserialize(payload)));
+      .then(({payload}) => {
+        const file = ESSerializer.deserialize(payload, [QvdFile, QvdSymbol]);
+        resolve(file);
+      });
   }).finally(() => worker.kill());
 }
 
