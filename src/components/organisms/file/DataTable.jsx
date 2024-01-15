@@ -2,7 +2,7 @@ import React, {useCallback, useEffect, useRef, useState, useMemo} from 'react';
 import PropTypes from 'prop-types';
 import {TableVirtuoso} from 'react-virtuoso';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
-import {faFilter, faTimes} from '@fortawesome/free-solid-svg-icons';
+import {faFilter, faTimes, faSort, faSortUp, faSortDown} from '@fortawesome/free-solid-svg-icons';
 import useStatus from '../../../hooks/useStatus';
 
 const TableWrapper = React.forwardRef((props, ref) => (
@@ -43,6 +43,7 @@ export default function DataTable({table}) {
   const {setTotalRows, setTotalColumns, setFiltered} = useStatus();
 
   const [filter, _setFilter] = useState([]);
+  const [sort, _setSort] = useState({});
   const [selected, _setSelected] = useState(null);
   const selectedRef = useRef(selected);
 
@@ -65,28 +66,75 @@ export default function DataTable({table}) {
     [_setFilter],
   );
 
+  const setSort = useCallback((column, type) => {
+    if (!type) {
+      _setSort((prev) => {
+        const newSort = {...prev};
+        delete newSort[column];
+        return newSort;
+      });
+    } else {
+      _setSort((prev) => ({...prev, [column]: type}));
+    }
+  }, []);
+
   const data = useMemo(() => {
+    let preparedTable;
+
     if (filter.length === 0) {
-      setTotalRows(table.data.length);
+      preparedTable = table.data.slice();
+
+      setTotalRows(preparedTable.length);
       setTotalColumns(table.columns.length);
       setFiltered(false);
+    } else {
+      preparedTable = table.data.slice().filter((row) => {
+        return filter.every(({column, value}) => {
+          const columnIndex = table.columns.indexOf(column);
+          return row[columnIndex] === value;
+        });
+      });
 
-      return table.data;
+      setTotalRows(preparedTable.length);
+      setTotalColumns(table.columns.length);
+      setFiltered(true);
     }
 
-    const filteredTable = table.data.filter((row) => {
-      return filter.every(({column, value}) => {
-        const columnIndex = table.columns.indexOf(column);
-        return row[columnIndex] === value;
+    const sortColumns = Object.keys(sort);
+
+    if (sortColumns.length > 0) {
+      preparedTable.sort((a, b) => {
+        for (const column of sortColumns) {
+          const columnIndex = table.columns.indexOf(column);
+          const aValue = a[columnIndex];
+          const bValue = b[columnIndex];
+
+          if (!isNaN(aValue) && !isNaN(bValue)) {
+            const aNumber = Number(aValue);
+            const bNumber = Number(bValue);
+
+            if (aNumber < bNumber) {
+              return sort[column] === 'asc' ? -1 : 1;
+            } else if (aNumber > bNumber) {
+              return sort[column] === 'asc' ? 1 : -1;
+            }
+          } else {
+            if (aValue < bValue) {
+              return sort[column] === 'asc' ? -1 : 1;
+            } else if (aValue > bValue) {
+              return sort[column] === 'asc' ? 1 : -1;
+            }
+          }
+        }
+
+        return 0;
       });
-    });
+    }
 
-    setTotalRows(filteredTable.length);
-    setTotalColumns(table.columns.length);
-    setFiltered(true);
+    console.log('called');
 
-    return filteredTable;
-  }, [filter, table]);
+    return preparedTable;
+  }, [filter, sort, table]);
 
   useEffect(() => {
     const handleCtrlC = (event) => {
@@ -166,7 +214,27 @@ export default function DataTable({table}) {
           <tr>
             {table.columns.map((column) => (
               <th key={column} className="px-4 py-2 border">
-                {column}
+                <div className="flex items-center justify-center space-x-1">
+                  <span>{column}</span>
+                  <div
+                    className="flex items-center cursor-pointer"
+                    onClick={() => {
+                      if (sort[column] === 'asc') {
+                        setSort(column, 'desc');
+                      } else if (sort[column] === 'desc') {
+                        setSort(column, null);
+                      } else {
+                        setSort(column, 'asc');
+                      }
+                    }}
+                  >
+                    {sort[column] === 'asc' && <FontAwesomeIcon icon={faSortUp} className="w-3 h-3" />}
+                    {sort[column] === 'desc' && <FontAwesomeIcon icon={faSortDown} className="w-3 h-3" />}
+                    {sort[column] !== 'asc' && sort[column] !== 'desc' && (
+                      <FontAwesomeIcon icon={faSort} className="w-3 h-3" />
+                    )}
+                  </div>
+                </div>
               </th>
             ))}
           </tr>
