@@ -7,7 +7,7 @@ const {QvdFile, QvdSymbol} = require('qvd4js');
 const ESSerializer = require('esserializer');
 const {WorkerHost} = require('../lib/worker');
 
-let currentFile = null;
+const openFiles = new Map();
 
 /**
  * Parses a QVD file in a worker process.
@@ -62,7 +62,8 @@ async function openFile(webContents) {
   currentWindow.webContents.send('file:opening', {path: filePath, name: path.basename(filePath)});
 
   try {
-    currentFile = await parseFile(filePath);
+    const currentFile = await parseFile(filePath);
+    openFiles.set(filePath, currentFile);
 
     currentWindow.webContents.send('file:opened', {
       path: filePath,
@@ -90,13 +91,14 @@ async function openFile(webContents) {
  * Closes the current file in the given window.
  *
  * @param {Electron.WebContents} webContents The web contents of the window to close the file in.
+ * @param {string} filePath The path of the file to close.
  */
-function closeFile(webContents) {
+function closeFile(webContents, filePath) {
   const currentWindow = BrowserWindow.fromWebContents(webContents);
 
-  currentFile = null;
+  openFiles.delete(filePath);
 
-  currentWindow.webContents.send('file:closed');
+  currentWindow.webContents.send('file:closed', filePath);
 }
 
 /**
@@ -201,7 +203,8 @@ async function openRecentFile(webContents, filePath) {
   }
 
   try {
-    currentFile = await parseFile(filePath);
+    const currentFile = await parseFile(filePath);
+    openFiles.set(filePath, currentFile);
 
     currentWindow.webContents.send('file:opened', {
       path: filePath,
@@ -227,9 +230,9 @@ async function openRecentFile(webContents, filePath) {
 
 app.whenReady().then(() => {
   ipcMain.handle('file:open', (event) => openFile(event.sender));
-  ipcMain.on('file:close', (event) => closeFile(event.sender));
+  ipcMain.on('file:close', (event, path) => closeFile(event.sender, path));
   ipcMain.on('file:addRecentFile', (event, path) => addRecentFile(path));
   ipcMain.on('file:clearRecentFiles', () => clearRecentFiles());
   ipcMain.handle('file:getRecentFiles', () => getRecentFiles());
-  ipcMain.handle('file:openRecentFile', (event, filePath) => openRecentFile(event.sender, filePath));
+  ipcMain.handle('file:openRecentFile', (event, path) => openRecentFile(event.sender, path));
 });

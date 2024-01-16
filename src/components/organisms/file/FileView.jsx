@@ -9,9 +9,10 @@ import DataTable from './DataTable';
  * Renders an error message.
  *
  * @param {string} err The error.
+ * @param {string} path The path of the file.
  * @return {*} The component.
  */
-function renderError(err) {
+function renderError(err, path) {
   switch (err) {
     case 'error:parsingFileFailed': {
       return (
@@ -21,7 +22,7 @@ function renderError(err) {
             The file is not displayed in the explorer because it is either corrupted or uses an unsupported QVD
             encoding.
           </div>
-          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close')}>
+          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close', path)}>
             Close File
           </Button>
         </>
@@ -34,7 +35,7 @@ function renderError(err) {
           <div className="text-center">
             The path to the file does not exist anymore. The file might have been moved or deleted.
           </div>
-          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close')}>
+          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close', path)}>
             Close File
           </Button>
         </>
@@ -45,7 +46,7 @@ function renderError(err) {
         <>
           <FontAwesomeIcon icon={faExclamationTriangle} className="w-12 h-12 text-amber-500" />
           <div className="text-center">An unknown error occurred while opening the file. Please try again.</div>
-          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close')}>
+          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close', path)}>
             Close File
           </Button>
         </>
@@ -59,7 +60,7 @@ function renderError(err) {
  *
  * @return {*} The component.
  */
-export default function FileView({loading, error, table, fileName}) {
+export default function FileView({loading, error, table, filePath}) {
   return (
     <div
       className={
@@ -93,7 +94,7 @@ export default function FileView({loading, error, table, fileName}) {
         </div>
       ) : error ? (
         <div className="flex justify-center items-center h-full w-full space-x-2 p-4">
-          <div className="flex flex-col items-center max-w-[500px] space-y-4">{renderError(error)}</div>
+          <div className="flex flex-col items-center max-w-[500px] space-y-4">{renderError(error, filePath)}</div>
         </div>
       ) : (
         <DataTable table={table} />
@@ -107,4 +108,5 @@ FileView.propTypes = {
   error: PropTypes.any,
   table: PropTypes.object,
   fileName: PropTypes.string,
+  filePath: PropTypes.string,
 };

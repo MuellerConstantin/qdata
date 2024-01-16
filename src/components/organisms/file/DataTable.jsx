@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import {TableVirtuoso} from 'react-virtuoso';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faFilter, faTimes, faSort, faSortUp, faSortDown} from '@fortawesome/free-solid-svg-icons';
-import useStatus from '../../../hooks/useStatus';
 
 const TableWrapper = React.forwardRef((props, ref) => (
   <div
@@ -40,8 +39,6 @@ const TableRow = (props) => <tr className="bg-white border-b hover:bg-gray-50" {
  * @return {*} The component.
  */
 export default function DataTable({table}) {
-  const {setTotalRows, setTotalColumns, setFiltered} = useStatus();
-
   const [filter, _setFilter] = useState([]);
   const [sort, _setSort] = useState({});
   const [selected, _setSelected] = useState(null);
@@ -83,10 +80,6 @@ export default function DataTable({table}) {
 
     if (filter.length === 0) {
       preparedTable = table.data.slice();
-
-      setTotalRows(preparedTable.length);
-      setTotalColumns(table.columns.length);
-      setFiltered(false);
     } else {
       preparedTable = table.data.slice().filter((row) => {
         return filter.every(({column, value}) => {
@@ -94,10 +87,6 @@ export default function DataTable({table}) {
           return row[columnIndex] === value;
         });
       });
-
-      setTotalRows(preparedTable.length);
-      setTotalColumns(table.columns.length);
-      setFiltered(true);
     }
 
     const sortColumns = Object.keys(sort);
@@ -131,8 +120,6 @@ export default function DataTable({table}) {
       });
     }
 
-    console.log('called');
-
     return preparedTable;
   }, [filter, sort, table]);
 
@@ -148,14 +135,6 @@ export default function DataTable({table}) {
     window.addEventListener('keydown', handleCtrlC);
     return () => window.removeEventListener('keydown', handleCtrlC);
   }, []);
-
-  useEffect(() => {
-    if (table) {
-      setTotalRows(table.data.length);
-      setTotalColumns(table.columns.length);
-      setFiltered(false);
-    }
-  }, [setTotalColumns, setTotalRows, table]);
 
   const TableScrollSeekPlaceholder = (props) => {
     return (

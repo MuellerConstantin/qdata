@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 
 export const StatusContext = React.createContext(null);
@@ -9,27 +9,7 @@ export const StatusContext = React.createContext(null);
  * @return {*} The component.
  */
 export function StatusProvider({children}) {
-  const [loading, setLoading] = useState(false);
-  const [filtered, setFiltered] = useState(false);
-  const [totalRows, setTotalRows] = useState(null);
-  const [totalColumns, setTotalColumns] = useState(null);
-
-  return (
-    <StatusContext.Provider
-      value={{
-        loading,
-        setLoading,
-        filtered,
-        setFiltered,
-        totalRows,
-        setTotalRows,
-        totalColumns,
-        setTotalColumns,
-      }}
-    >
-      {children}
-    </StatusContext.Provider>
-  );
+  return <StatusContext.Provider value={{}}>{children}</StatusContext.Provider>;
 }
 
 StatusProvider.propTypes = {

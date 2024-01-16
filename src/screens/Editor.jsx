@@ -1,9 +1,9 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {useDispatch} from 'react-redux';
 import {Tab} from '@headlessui/react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faTimes} from '@fortawesome/free-solid-svg-icons';
-import useStatus from '../hooks/useStatus';
+import {useMap} from '@uidotdev/usehooks';
 import BorderTemplate from '../components/templates/BorderTemplate';
 import FileView from '../components/organisms/file/FileView';
 import BackgroundView from '../components/organisms/layout/BackgroundView';
@@ -18,14 +18,38 @@ import filesSlice from '../store/slices/files';
 export default function Editor() {
   const dispatch = useDispatch();
 
-  const {setLoading: setStatusLoading, setTotalColumns, setTotalRows} = useStatus();
-
   const [selectedTab, setSelectedTab] = useState(0);
   const [showGettingStarted, setShowGettingStarted] = useState(true);
-  const [fileName, setFileName] = useState(null);
-  const [table, setTable] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const files = useMap();
+
+  const addFile = useCallback((path, name) => {
+    files.set(path, {
+      name,
+      table: null,
+      loading: true,
+      error: null,
+    });
+  }, []);
+
+  const setFileLoaded = useCallback((path, table) => {
+    files.set(path, {
+      ...files.get(path),
+      loading: false,
+      table,
+    });
+  }, []);
+
+  const setFileError = useCallback((path, error) => {
+    files.set(path, {
+      ...files.get(path),
+      loading: false,
+      error,
+    });
+  }, []);
+
+  const removeFile = useCallback((path) => {
+    files.delete(path);
+  }, []);
 
   useEffect(() => {
     window.electron.ipc
@@ -36,53 +60,45 @@ export default function Editor() {
       dispatch(filesSlice.actions.setRecentFiles(recentFiles)),
     );
 
-    window.electron.ipc.on('file:opening', ({name}) => {
+    window.electron.ipc.on('file:opening', ({name, path}) => {
       setShowGettingStarted(false);
-      setLoading(true);
-      setStatusLoading(true);
-      setError(null);
-      setFileName(name);
+      addFile(path, name);
+      setSelectedTab(Array.from(files.keys()).length - 1);
     });
 
-    window.electron.ipc.on('error:parsingFileFailed', () => {
-      setLoading(false);
-      setStatusLoading(false);
-      setError('error:parsingFileFailed');
+    window.electron.ipc.on('error:parsingFileFailed', ({path}) => {
+      setFileError(path, 'error:parsingFileFailed');
     });
 
-    window.electron.ipc.on('error:fileNotFound', () => {
-      setLoading(false);
-      setStatusLoading(false);
-      setError('error:fileNotFound');
+    window.electron.ipc.on('error:fileNotFound', ({path}) => {
+      setFileError(path, 'error:fileNotFound');
     });
 
-    window.electron.ipc.on('file:opened', ({table}) => {
-      setLoading(false);
-      setStatusLoading(false);
-      setTable(table);
+    window.electron.ipc.on('file:opened', ({path, table}) => {
+      setFileLoaded(path, table);
     });
 
-    window.electron.ipc.on('file:closed', () => {
-      setLoading(false);
-      setStatusLoading(false);
-      setFileName(null);
-      setError(null);
-      setTable(null);
-      setTotalRows(null);
-      setTotalColumns(null);
+    window.electron.ipc.on('file:closed', (path) => {
+      removeFile(path);
+      setSelectedTab(0);
     });
   }, []);
 
   return (
     <BorderTemplate>
-      {showGettingStarted || fileName ? (
+      {showGettingStarted || files.size > 0 ? (
         <div className="bg-white text-gray-800 w-full h-full flex flex-col">
           <Tab.Group selectedIndex={selectedTab} onChange={(index) => setSelectedTab(index)}>
-            <Tab.List className="bg-gray-100 px-2 pt-2 border-t border-b h-12 flex">
+            <Tab.List
+              className={
+                'bg-gray-100 px-2 pt-4 border-t border-b flex overflow-x-auto overflow-y-hidden ' +
+                'scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200'
+              }
+            >
               {showGettingStarted && (
                 <Tab
                   className={({selected}) =>
-                    'bg-white flex items-center justify-between w-fit h-10 max-w-[250px] min-w-[100px] ' +
+                    'bg-white flex items-center justify-between w-fit h-10 max-w-[250px] ' +
                     `px-2 space-x-6 ${
                       selected ? 'border-t-2 border-t-green-600' : 'border-t border-b'
                     } border-l border-r select-none`
@@ -97,27 +113,27 @@ export default function Editor() {
                   </div>
                 </Tab>
               )}
-              {fileName && (
+              {Array.from(files.keys()).map((path) => (
                 <Tab
+                  key={path}
                   className={({selected}) =>
-                    'bg-white flex items-center justify-between w-fit h-10 max-w-[250px] min-w-[100px] ' +
+                    'bg-white flex items-center justify-between w-fit h-10 max-w-[250px] ' +
                     `px-2 space-x-6 ${
                       selected ? 'border-t-2 border-t-green-600' : 'border-t border-b'
                     } border-l border-r select-none`
                   }
                 >
-                  <span className="truncate text-sm">{fileName}</span>
+                  <span className="truncate text-sm">{files.get(path).name}</span>
                   <div
                     className="text-gray-800 hover:text-gray-600 focus:outline-none flex items-center justify-center"
                     onClick={() => {
-                      window.electron.ipc.send('file:close');
-                      setSelectedTab(0);
+                      window.electron.ipc.send('file:close', path);
                     }}
                   >
                     <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                   </div>
                 </Tab>
-              )}
+              ))}
             </Tab.List>
             <Tab.Panels className="w-full h-full">
               {showGettingStarted && (
@@ -125,13 +141,19 @@ export default function Editor() {
                   <GettingStartedView />
                 </Tab.Panel>
               )}
-              {fileName && (
-                <Tab.Panel className="h-full w-full">
+              {Array.from(files.keys()).map((path) => (
+                <Tab.Panel key={path} className="h-full w-full">
                   <div className="w-full h-full flex flex-col">
-                    <FileView loading={loading} error={error} table={table} fileName={fileName} />
+                    <FileView
+                      loading={files.get(path).loading}
+                      error={files.get(path).error}
+                      table={files.get(path).table}
+                      fileName={files.get(path).name}
+                      filePath={path}
+                    />
                   </div>
                 </Tab.Panel>
-              )}
+              ))}
             </Tab.Panels>
           </Tab.Group>
         </div>
