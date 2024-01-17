@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef, useState, useMemo} from 'react';
+import React, {useCallback, useRef, useState, useMemo} from 'react';
 import PropTypes from 'prop-types';
 import {TableVirtuoso} from 'react-virtuoso';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
@@ -38,16 +38,25 @@ const TableRow = (props) => <tr className="bg-white border-b hover:bg-gray-50" {
  *
  * @return {*} The component.
  */
-export default function DataTable({table}) {
+export default function DataTable({table, onSelect}) {
   const [filter, _setFilter] = useState([]);
   const [sort, _setSort] = useState({});
   const [selected, _setSelected] = useState(null);
   const selectedRef = useRef(selected);
 
-  const setSelected = useCallback((value) => {
-    selectedRef.current = value;
-    _setSelected(value);
-  }, []);
+  const setSelected = useCallback(
+    (coordinates) => {
+      selectedRef.current = coordinates;
+      _setSelected(coordinates);
+
+      if (onSelect) {
+        const [row, column] = coordinates;
+        const value = table.data[row][column];
+        onSelect(value);
+      }
+    },
+    [onSelect],
+  );
 
   const addFilter = useCallback(
     (value) => {
@@ -122,19 +131,6 @@ export default function DataTable({table}) {
 
     return preparedTable;
   }, [filter, sort, table]);
-
-  useEffect(() => {
-    const handleCtrlC = (event) => {
-      if (event.ctrlKey && event.code === 'KeyC' && selectedRef.current) {
-        const [row, column] = selectedRef.current;
-        const value = table.data[row][column];
-        navigator.clipboard.writeText(value);
-      }
-    };
-
-    window.addEventListener('keydown', handleCtrlC);
-    return () => window.removeEventListener('keydown', handleCtrlC);
-  }, []);
 
   const TableScrollSeekPlaceholder = (props) => {
     return (
@@ -244,4 +240,5 @@ DataTable.propTypes = {
     columns: PropTypes.arrayOf(PropTypes.string).isRequired,
     data: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.any)).isRequired,
   }).isRequired,
+  onSelect: PropTypes.func,
 };

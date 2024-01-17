@@ -142,16 +142,19 @@ export default function Editor() {
                 </Tab.Panel>
               )}
               {Array.from(files.keys()).map((path) => (
-                <Tab.Panel key={path} className="h-full w-full">
-                  <div className="w-full h-full flex flex-col">
-                    <FileView
-                      loading={files.get(path).loading}
-                      error={files.get(path).error}
-                      table={files.get(path).table}
-                      fileName={files.get(path).name}
-                      filePath={path}
-                    />
-                  </div>
+                <Tab.Panel key={path} className="h-full w-full" unmount={false}>
+                  {({selected}) => (
+                    <div className="w-full h-full flex flex-col">
+                      <FileView
+                        selected={selected}
+                        loading={files.get(path).loading}
+                        error={files.get(path).error}
+                        table={files.get(path).table}
+                        fileName={files.get(path).name}
+                        filePath={path}
+                      />
+                    </div>
+                  )}
                 </Tab.Panel>
               ))}
             </Tab.Panels>

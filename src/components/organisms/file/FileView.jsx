@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import PropTypes from 'prop-types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faExclamationTriangle} from '@fortawesome/free-solid-svg-icons';
@@ -60,7 +60,25 @@ function renderError(err, path) {
  *
  * @return {*} The component.
  */
-export default function FileView({loading, error, table, filePath}) {
+export default function FileView({loading, error, table, filePath, selected}) {
+  const [selectedValue, setSelectedValue] = useState(null);
+
+  const handleCtrlC = useCallback(
+    (event) => {
+      if (event.ctrlKey && event.code === 'KeyC') {
+        if (selected && selectedValue) {
+          navigator.clipboard.writeText(selectedValue);
+        }
+      }
+    },
+    [selectedValue, selected],
+  );
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleCtrlC);
+    return () => window.removeEventListener('keydown', handleCtrlC);
+  }, [handleCtrlC]);
+
   return (
     <div
       className={
@@ -97,13 +115,14 @@ export default function FileView({loading, error, table, filePath}) {
           <div className="flex flex-col items-center max-w-[500px] space-y-4">{renderError(error, filePath)}</div>
         </div>
       ) : (
-        <DataTable table={table} />
+        <DataTable table={table} onSelect={(value) => setSelectedValue(value)} />
       )}
     </div>
   );
 }
 
 FileView.propTypes = {
+  selected: PropTypes.bool,
   loading: PropTypes.bool,
   error: PropTypes.any,
   table: PropTypes.object,
