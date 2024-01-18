@@ -1,4 +1,4 @@
-import React, {useCallback, useRef, useState, useMemo} from 'react';
+import React, {useCallback, useRef, useState, useMemo, useEffect} from 'react';
 import PropTypes from 'prop-types';
 import {TableVirtuoso} from 'react-virtuoso';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
@@ -38,7 +38,7 @@ const TableRow = (props) => <tr className="bg-white border-b hover:bg-gray-50" {
  *
  * @return {*} The component.
  */
-export default function DataTable({table, onSelect}) {
+export default function DataTable({table, onSelect, onFilter, onSort, onShape}) {
   const [filter, _setFilter] = useState([]);
   const [sort, _setSort] = useState({});
   const [selected, _setSelected] = useState(null);
@@ -144,6 +144,18 @@ export default function DataTable({table, onSelect}) {
     );
   };
 
+  useEffect(() => {
+    onShape?.(data && table ? [data.length, table.columns.length] : null);
+  }, [data, table]);
+
+  useEffect(() => {
+    onFilter?.(filter);
+  }, [filter]);
+
+  useEffect(() => {
+    onSort?.(sort);
+  }, [sort]);
+
   return (
     <div className="h-full w-full flex flex-col space-y-2">
       {filter?.length > 0 && (
@@ -241,4 +253,7 @@ DataTable.propTypes = {
     data: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.any)).isRequired,
   }).isRequired,
   onSelect: PropTypes.func,
+  onFilter: PropTypes.func,
+  onSort: PropTypes.func,
+  onShape: PropTypes.func,
 };

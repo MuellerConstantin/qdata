@@ -2,8 +2,9 @@ import React, {useState, useEffect, useCallback} from 'react';
 import PropTypes from 'prop-types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faExclamationTriangle} from '@fortawesome/free-solid-svg-icons';
+import useStatus from '../../../hooks/useStatus';
 import Button from '../../atoms/Button';
-import DataTable from './DataTable';
+import DataTable from '../../molecules/file/DataTable';
 
 /**
  * Renders an error message.
@@ -60,24 +61,56 @@ function renderError(err, path) {
  *
  * @return {*} The component.
  */
-export default function FileView({loading, error, table, filePath, selected}) {
+export default function FileView({loading, error, table, filePath, active}) {
+  const {setLoading, setTotalRows, setTotalColumns, setFiltered} = useStatus();
+
   const [selectedValue, setSelectedValue] = useState(null);
+  const [tableFiltered, setTableFiltered] = useState(null);
+  const [tableShape, setTableShape] = useState(null);
 
   const handleCtrlC = useCallback(
     (event) => {
       if (event.ctrlKey && event.code === 'KeyC') {
-        if (selected && selectedValue) {
+        if (active && selectedValue) {
           navigator.clipboard.writeText(selectedValue);
         }
       }
     },
-    [selectedValue, selected],
+    [selectedValue, active],
   );
 
   useEffect(() => {
     window.addEventListener('keydown', handleCtrlC);
     return () => window.removeEventListener('keydown', handleCtrlC);
   }, [handleCtrlC]);
+
+  useEffect(() => {
+    if (active) {
+      setLoading(loading);
+    }
+  }, [active, loading]);
+
+  useEffect(() => {
+    if (active) {
+      setTotalRows(tableShape?.[0]);
+      setTotalColumns(tableShape?.[1]);
+    }
+  }, [active, tableShape]);
+
+  useEffect(() => {
+    if (active) {
+      setFiltered(tableFiltered);
+    }
+  }, [active, tableFiltered]);
+
+  useEffect(() => {
+    return () => {
+      setLoading(null);
+      setTotalRows(null);
+      setTotalColumns(null);
+      setFiltered(null);
+    };
+  }, []);
 
   return (
     <div
@@ -115,14 +148,19 @@ export default function FileView({loading, error, table, filePath, selected}) {
           <div className="flex flex-col items-center max-w-[500px] space-y-4">{renderError(error, filePath)}</div>
         </div>
       ) : (
-        <DataTable table={table} onSelect={(value) => setSelectedValue(value)} />
+        <DataTable
+          table={table}
+          onSelect={(value) => setSelectedValue(value)}
+          onFilter={(filter) => setTableFiltered(!!filter)}
+          onShape={(shape) => setTableShape(shape)}
+        />
       )}
     </div>
   );
 }
 
 FileView.propTypes = {
-  selected: PropTypes.bool,
+  active: PropTypes.bool,
   loading: PropTypes.bool,
   error: PropTypes.any,
   table: PropTypes.object,

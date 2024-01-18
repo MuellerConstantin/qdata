@@ -146,7 +146,7 @@ export default function Editor() {
                   {({selected}) => (
                     <div className="w-full h-full flex flex-col">
                       <FileView
-                        selected={selected}
+                        active={selected}
                         loading={files.get(path).loading}
                         error={files.get(path).error}
                         table={files.get(path).table}
