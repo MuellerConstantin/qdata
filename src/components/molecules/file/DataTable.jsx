@@ -59,8 +59,14 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
   );
 
   const addFilter = useCallback(
-    (value) => {
-      _setFilter((prev) => [...prev, value]);
+    (newFilter) => {
+      const alreadyExists = !!filter.find(
+        (currentFilter) => currentFilter.column === newFilter.column && currentFilter.value === newFilter.value,
+      );
+
+      if (!alreadyExists) {
+        _setFilter((prev) => [...prev, newFilter]);
+      }
     },
     [filter],
   );
