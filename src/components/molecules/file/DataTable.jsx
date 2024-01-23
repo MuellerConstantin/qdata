@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import {TableVirtuoso} from 'react-virtuoso';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faFilter, faTimes, faSort, faSortUp, faSortDown} from '@fortawesome/free-solid-svg-icons';
+import DataCellContextMenu from './DataCellContextMenu';
 
 const TableWrapper = React.forwardRef((props, ref) => (
   <div
@@ -43,6 +44,8 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
   const [sort, _setSort] = useState({});
   const [selected, _setSelected] = useState(null);
   const selectedRef = useRef(selected);
+  const [cellContext, setCellContext] = useState(null);
+  const [cellContextMenuCoordinates, setCellContextMenuCoordinates] = useState(null);
 
   const setSelected = useCallback(
     (coordinates) => {
@@ -163,7 +166,7 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
   }, [sort]);
 
   return (
-    <div className="h-full w-full flex flex-col space-y-2">
+    <div className="h-full w-full flex flex-col space-y-2 relative">
       {filter?.length > 0 && (
         <div
           className={
@@ -242,12 +245,28 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
                 }`}
                 onClick={() => setSelected([rowIndex, columnIndex])}
                 onDoubleClick={() => addFilter({column: table.columns[columnIndex], value})}
+                onContextMenu={(event) => {
+                  setSelected([rowIndex, columnIndex]);
+                  setCellContext({
+                    row: rowIndex,
+                    column: table.columns[columnIndex],
+                    value,
+                  });
+                  setCellContextMenuCoordinates({x: event.clientX, y: event.clientY});
+                }}
               >
                 {value}
               </td>
             ))}
           </>
         )}
+      />
+      <DataCellContextMenu
+        show={!!cellContextMenuCoordinates}
+        onClose={() => setCellContextMenuCoordinates(null)}
+        position={cellContextMenuCoordinates}
+        context={cellContext}
+        onFilter={(value) => addFilter({column: cellContext.column, value})}
       />
     </div>
   );
