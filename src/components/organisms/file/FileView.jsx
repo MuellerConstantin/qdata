@@ -65,7 +65,7 @@ export default function FileView({loading, error, table, filePath, active}) {
   const {setLoading, setTotalRows, setTotalColumns, setFiltered} = useStatus();
 
   const [selectedValue, setSelectedValue] = useState(null);
-  const [tableFiltered, setTableFiltered] = useState(null);
+  const [tableFiltered, setTableFiltered] = useState(false);
   const [tableShape, setTableShape] = useState(null);
 
   const handleCtrlC = useCallback(
@@ -151,7 +151,7 @@ export default function FileView({loading, error, table, filePath, active}) {
         <DataTable
           table={table}
           onSelect={(value) => setSelectedValue(value)}
-          onFilter={(filter) => setTableFiltered(!!filter)}
+          onFilter={(filter) => setTableFiltered(filter && filter.length > 0)}
           onShape={(shape) => setTableShape(shape)}
         />
       )}

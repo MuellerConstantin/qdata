@@ -4,6 +4,7 @@ import {TableVirtuoso} from 'react-virtuoso';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faFilter, faTimes, faSort, faSortUp, faSortDown} from '@fortawesome/free-solid-svg-icons';
 import DataCellContextMenu from './DataCellContextMenu';
+import Tooltip from '../../atoms/Tooltip';
 
 const TableWrapper = React.forwardRef((props, ref) => (
   <div
@@ -33,6 +34,67 @@ const TableHead = React.forwardRef((props, ref) => (
 TableHead.displayName = 'TableHead';
 
 const TableRow = (props) => <tr className="bg-white border-b hover:bg-gray-50" {...props} />;
+
+const TableFilter = ({column, operation, value, onClose}) => {
+  const anchorRef = useRef();
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const operationText = useMemo(() => {
+    switch (operation) {
+      case 'eq': {
+        return 'Equals';
+      }
+      case 'ne': {
+        return 'Not Equals';
+      }
+      case 'gt': {
+        return 'Greater than';
+      }
+      case 'ge': {
+        return 'Greater than or Equals';
+      }
+      case 'lt': {
+        return 'Less than';
+      }
+      case 'le': {
+        return 'Less than or Equals';
+      }
+      default: {
+        return '';
+      }
+    }
+  }, [operation]);
+
+  return (
+    <>
+      <div
+        ref={anchorRef}
+        className={
+          'space-x-2 flex items-center justify-center text-gray-800 border ' + 'bg-gray-100 p-1 text-xs rounded'
+        }
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+        <span className="truncate">{column}</span>
+        <button
+          className="text-gray-800 hover:text-gray-600 focus:outline-none flex items-center justify-center"
+          onClick={() => onClose?.()}
+        >
+          <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+        </button>
+      </div>
+      <Tooltip anchorRef={anchorRef.current} show={showTooltip} text={`${operationText} '${value}'`} />
+    </>
+  );
+};
+
+TableFilter.propTypes = {
+  column: PropTypes.string.isRequired,
+  operation: PropTypes.string,
+  value: PropTypes.any,
+  onClose: PropTypes.func,
+};
 
 /**
  * Component for viewing tabular data.
@@ -64,7 +126,10 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
   const addFilter = useCallback(
     (newFilter) => {
       const alreadyExists = !!filter.find(
-        (currentFilter) => currentFilter.column === newFilter.column && currentFilter.value === newFilter.value,
+        (currentFilter) =>
+          currentFilter.column === newFilter.column &&
+          currentFilter.value === newFilter.value &&
+          currentFilter.operation === newFilter.operation,
       );
 
       if (!alreadyExists) {
@@ -100,9 +165,40 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
       preparedTable = table.data.slice();
     } else {
       preparedTable = table.data.slice().filter((row) => {
-        return filter.every(({column, value}) => {
+        return filter.every(({column, value, operation}) => {
           const columnIndex = table.columns.indexOf(column);
-          return row[columnIndex] === value;
+
+          let aValue = row[columnIndex];
+          let bValue = value;
+
+          if (!isNaN(aValue) && !isNaN(bValue)) {
+            aValue = Number(aValue);
+            bValue = Number(bValue);
+          }
+
+          switch (operation) {
+            case 'eq': {
+              return aValue === bValue;
+            }
+            case 'ne': {
+              return aValue !== bValue;
+            }
+            case 'gt': {
+              return aValue > bValue;
+            }
+            case 'ge': {
+              return aValue >= bValue;
+            }
+            case 'lt': {
+              return aValue < bValue;
+            }
+            case 'le': {
+              return aValue <= bValue;
+            }
+            default: {
+              return false;
+            }
+          }
         });
       });
     }
@@ -174,22 +270,14 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
             'scrollbar-track-gray-200 pb-2 select-none'
           }
         >
-          {filter.map(({column, value}, index) => (
-            <div
+          {filter.map(({column, value, operation}, index) => (
+            <TableFilter
               key={index}
-              className={
-                'space-x-2 flex items-center justify-center text-gray-800 border ' + 'bg-gray-100 p-1 text-xs rounded'
-              }
-            >
-              <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
-              <span className="truncate">{column}</span>
-              <button
-                className="text-gray-800 hover:text-gray-600 focus:outline-none flex items-center justify-center"
-                onClick={() => removeFilter(index)}
-              >
-                <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-              </button>
-            </div>
+              column={column}
+              value={value}
+              operation={operation}
+              onClose={() => removeFilter(index)}
+            />
           ))}
         </div>
       )}
@@ -244,7 +332,7 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
                   selected && rowIndex === selected[0] && columnIndex === selected[1] ? 'bg-gray-200' : ''
                 }`}
                 onClick={() => setSelected([rowIndex, columnIndex])}
-                onDoubleClick={() => addFilter({column: table.columns[columnIndex], value})}
+                onDoubleClick={() => addFilter({column: table.columns[columnIndex], value, operation: 'eq'})}
                 onContextMenu={(event) => {
                   setSelected([rowIndex, columnIndex]);
                   setCellContext({
@@ -266,7 +354,7 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
         onClose={() => setCellContextMenuCoordinates(null)}
         position={cellContextMenuCoordinates}
         context={cellContext}
-        onFilter={(value) => addFilter({column: cellContext.column, value})}
+        onFilter={(value, operation) => addFilter({column: cellContext.column, value, operation})}
       />
     </div>
   );
