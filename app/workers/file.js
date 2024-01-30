@@ -6,8 +6,8 @@ const {WorkerClient} = require('../lib/worker');
   const clientId = process.argv[2];
   const filePath = process.argv[3];
 
-  const worker = new WorkerClient();
-  await worker.connect(clientId, 'HOST');
+  const worker = new WorkerClient(clientId);
+  await worker.connect('HOST');
 
   console.log(`Loading file '${filePath}' in worker '${clientId}'`);
 
