@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import {TableVirtuoso} from 'react-virtuoso';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faFilter, faTimes, faSort, faSortUp, faSortDown} from '@fortawesome/free-solid-svg-icons';
+import DataHeaderContextMenu from './DataHeaderContextMenu';
 import DataCellContextMenu from './DataCellContextMenu';
 import Tooltip from '../../atoms/Tooltip';
 
@@ -106,8 +107,12 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
   const [sort, _setSort] = useState({});
   const [selected, _setSelected] = useState(null);
   const selectedRef = useRef(selected);
+
   const [cellContext, setCellContext] = useState(null);
   const [cellContextMenuCoordinates, setCellContextMenuCoordinates] = useState(null);
+
+  const [headerContext, setHeaderContext] = useState(null);
+  const [headerContextMenuCoordinates, setHeaderContextMenuCoordinates] = useState(null);
 
   const setSelected = useCallback(
     (coordinates) => {
@@ -297,7 +302,14 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
         fixedHeaderContent={() => (
           <tr>
             {table.columns.map((column) => (
-              <th key={column} className="px-4 py-2 border">
+              <th
+                key={column}
+                className="px-4 py-2 border"
+                onContextMenu={(event) => {
+                  setHeaderContext({column});
+                  setHeaderContextMenuCoordinates({x: event.clientX, y: event.clientY});
+                }}
+              >
                 <div className="flex items-center justify-center space-x-1">
                   <span>{column}</span>
                   <div
@@ -355,6 +367,12 @@ export default function DataTable({table, onSelect, onFilter, onSort, onShape}) 
         position={cellContextMenuCoordinates}
         context={cellContext}
         onFilter={(value, operation) => addFilter({column: cellContext.column, value, operation})}
+      />
+      <DataHeaderContextMenu
+        show={!!headerContextMenuCoordinates}
+        onClose={() => setHeaderContextMenuCoordinates(null)}
+        position={headerContextMenuCoordinates}
+        context={headerContext}
       />
     </div>
   );
