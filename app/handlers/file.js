@@ -3,7 +3,7 @@ const fs = require('fs');
 const {randomUUID} = require('crypto');
 const {fork} = require('child_process');
 const {app, BrowserWindow, ipcMain, dialog} = require('electron');
-const {QvdFile, QvdSymbol} = require('qvd4js');
+const {QvdDataFrame, QvdSymbol} = require('qvd4js');
 const ESSerializer = require('esserializer');
 const {WorkerHost} = require('../lib/worker');
 
@@ -13,7 +13,7 @@ const openFiles = new Map();
  * Parses a QVD file in a worker process.
  *
  * @param {string} filePath The path of the file to parse.
- * @return {Promise<any>} A promise that resolves when the file is parsed.
+ * @return {Promise<QvdDataFrame>} A promise that resolves when the file is parsed.
  */
 async function parseFile(filePath) {
   const workerId = `file-${randomUUID()}`;
@@ -32,8 +32,8 @@ async function parseFile(filePath) {
     WorkerHost.getInstance()
       .join('done', workerId)
       .then(({payload}) => {
-        const file = ESSerializer.deserialize(payload, [QvdFile, QvdSymbol]);
-        resolve(file);
+        const df = ESSerializer.deserialize(payload, [QvdDataFrame, QvdSymbol]);
+        resolve(df);
       });
   }).finally(() => worker.kill());
 }
@@ -62,13 +62,13 @@ async function openFile(webContents) {
   currentWindow.webContents.send('file:opening', {path: filePath, name: path.basename(filePath)});
 
   try {
-    const currentFile = await parseFile(filePath);
-    openFiles.set(filePath, currentFile);
+    const df = await parseFile(filePath);
+    openFiles.set(filePath, df);
 
     currentWindow.webContents.send('file:opened', {
       path: filePath,
       name: path.basename(filePath),
-      table: currentFile.getTable(),
+      table: await df.toDict(),
     });
 
     await addRecentFile(filePath);
@@ -203,13 +203,13 @@ async function openRecentFile(webContents, filePath) {
   }
 
   try {
-    const currentFile = await parseFile(filePath);
-    openFiles.set(filePath, currentFile);
+    const df = await parseFile(filePath);
+    openFiles.set(filePath, df);
 
     currentWindow.webContents.send('file:opened', {
       path: filePath,
       name: path.basename(filePath),
-      table: currentFile.getTable(),
+      table: await df.toDict(),
     });
 
     await addRecentFile(filePath);
