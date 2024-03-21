@@ -26,21 +26,21 @@ export default function GettingStartedView() {
             <div className="space-y-2">
               <div
                 className="flex items-center justify-left space-x-2 hover:cursor-pointer w-fit"
-                onClick={() => window.electron.ipc.send('window:new')}
+                onClick={() => window.electron.ipcMain.send('window:new')}
               >
                 <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-5 w-5 text-green-600" />
                 <span>New Window</span>
               </div>
               <div
                 className="flex items-center justify-left space-x-2 hover:cursor-pointer w-fit"
-                onClick={() => window.electron.ipc.invoke('file:open')}
+                onClick={() => window.electron.ipcMain.invoke('file:open')}
               >
                 <FontAwesomeIcon icon={faFolderOpen} className="h-5 w-5 text-green-600" />
                 <span>Open File...</span>
               </div>
               <div
                 className="flex items-center justify-left space-x-2 hover:cursor-pointer w-fit"
-                onClick={() => window.electron.ipc.send('app:exit')}
+                onClick={() => window.electron.ipcMain.send('app:exit')}
               >
                 <FontAwesomeIcon icon={faArrowRightFromBracket} className="h-5 w-5 text-green-600" />
                 <span>Exit</span>
@@ -58,7 +58,7 @@ export default function GettingStartedView() {
                     className={
                       'group flex items-center justify-left space-x-2 hover:cursor-pointer ' + 'w-fit max-w-full'
                     }
-                    onClick={() => window.electron.ipc.invoke('file:openRecentFile', recentFile)}
+                    onClick={() => window.electron.ipcMain.invoke('file:openRecentFile', recentFile)}
                   >
                     <span className="truncate space-x-2">
                       <span className="text-green-600 group-hover:underline">{recentFile.replace(/^.*[\\/]/, '')}</span>

@@ -17,11 +17,11 @@ export default function FileMenu() {
   const [fileOpen, setFileOpen] = useState(false);
 
   useEffect(() => {
-    window.electron.ipc.on('file:opened', () => {
+    window.electron.ipcMain.on('file:opened', () => {
       setFileOpen(true);
     });
 
-    window.electron.ipc.on('file:closed', () => {
+    window.electron.ipcMain.on('file:closed', () => {
       setFileOpen(false);
     });
   }, []);
@@ -29,7 +29,7 @@ export default function FileMenu() {
   useEffect(() => {
     const handleCtrlO = (event) => {
       if (event.ctrlKey && event.code === 'KeyO') {
-        window.electron.ipc.invoke('file:open');
+        window.electron.ipcMain.invoke('file:open');
       }
     };
 
@@ -40,7 +40,7 @@ export default function FileMenu() {
   useEffect(() => {
     const handleCtrlN = (event) => {
       if (event.ctrlKey && event.code === 'KeyN') {
-        window.electron.ipc.send('window:new');
+        window.electron.ipcMain.send('window:new');
       }
     };
 
@@ -123,7 +123,7 @@ export default function FileMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
-                      onClick={() => window.electron.ipc.send('window:new')}
+                      onClick={() => window.electron.ipcMain.send('window:new')}
                     >
                       <span className="truncate">New Window</span>
                       <span>Ctrl+N</span>
@@ -136,7 +136,7 @@ export default function FileMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm disabled:opacity-50`}
-                      onClick={() => window.electron.ipc.send('window:close')}
+                      onClick={() => window.electron.ipcMain.send('window:close')}
                     >
                       <span className="truncate">Close Window</span>
                     </button>
@@ -150,7 +150,7 @@ export default function FileMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
-                      onClick={() => window.electron.ipc.invoke('file:open')}
+                      onClick={() => window.electron.ipcMain.invoke('file:open')}
                     >
                       <span className="truncate">Open File...</span>
                       <span>Ctrl+O</span>
@@ -200,7 +200,9 @@ export default function FileMenu() {
                                           className={`${
                                             active ? 'bg-green-600 text-white' : 'text-gray-800'
                                           } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
-                                          onClick={() => window.electron.ipc.invoke('file:openRecentFile', recentFile)}
+                                          onClick={() =>
+                                            window.electron.ipcMain.invoke('file:openRecentFile', recentFile)
+                                          }
                                         >
                                           <span className="truncate space-x-2">
                                             <span className="text-green-600 group-hover:text-white">
@@ -220,7 +222,7 @@ export default function FileMenu() {
                                       className={`${
                                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                                       } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
-                                      onClick={() => window.electron.ipc.send('file:clearRecentFiles')}
+                                      onClick={() => window.electron.ipcMain.send('file:clearRecentFiles')}
                                     >
                                       <span className="truncate">Clear Recently Opened...</span>
                                     </button>
@@ -240,7 +242,7 @@ export default function FileMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm disabled:opacity-50`}
-                      onClick={() => window.electron.ipc.send('file:close')}
+                      onClick={() => window.electron.ipcMain.send('file:close')}
                       disabled={!fileOpen}
                     >
                       <span className="truncate">Close File</span>
@@ -255,7 +257,7 @@ export default function FileMenu() {
                       className={`${
                         active ? 'bg-green-600 text-white' : 'text-gray-800'
                       } group flex w-full items-center h-8 px-4 text-sm justify-between space-x-2`}
-                      onClick={() => window.electron.ipc.send('app:exit')}
+                      onClick={() => window.electron.ipcMain.send('app:exit')}
                     >
                       <span className="truncate">Exit</span>
                       <span>Alt+F4</span>

@@ -23,7 +23,7 @@ function renderError(err, path) {
             The file is not displayed in the explorer because it is either corrupted or uses an unsupported QVD
             encoding.
           </div>
-          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close', path)}>
+          <Button className="!px-8" onClick={() => window.electron.ipcMain.send('file:close', path)}>
             Close File
           </Button>
         </>
@@ -36,7 +36,7 @@ function renderError(err, path) {
           <div className="text-center">
             The path to the file does not exist anymore. The file might have been moved or deleted.
           </div>
-          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close', path)}>
+          <Button className="!px-8" onClick={() => window.electron.ipcMain.send('file:close', path)}>
             Close File
           </Button>
         </>
@@ -47,7 +47,7 @@ function renderError(err, path) {
         <>
           <FontAwesomeIcon icon={faExclamationTriangle} className="w-12 h-12 text-amber-500" />
           <div className="text-center">An unknown error occurred while opening the file. Please try again.</div>
-          <Button className="!px-8" onClick={() => window.electron.ipc.send('file:close', path)}>
+          <Button className="!px-8" onClick={() => window.electron.ipcMain.send('file:close', path)}>
             Close File
           </Button>
         </>

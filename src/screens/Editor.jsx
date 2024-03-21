@@ -52,33 +52,33 @@ export default function Editor() {
   }, []);
 
   useEffect(() => {
-    window.electron.ipc
+    window.electron.ipcMain
       .invoke('file:getRecentFiles')
       .then((recentFiles) => dispatch(filesSlice.actions.setRecentFiles(recentFiles)));
 
-    window.electron.ipc.on('file:recentFilesChanged', (recentFiles) =>
+    window.electron.ipcMain.on('file:recentFilesChanged', (recentFiles) =>
       dispatch(filesSlice.actions.setRecentFiles(recentFiles)),
     );
 
-    window.electron.ipc.on('file:opening', ({name, path}) => {
+    window.electron.ipcMain.on('file:opening', ({name, path}) => {
       setShowGettingStarted(false);
       addFile(path, name);
       setSelectedTab(Array.from(files.keys()).length - 1);
     });
 
-    window.electron.ipc.on('error:parsingFileFailed', ({path}) => {
+    window.electron.ipcMain.on('error:parsingFileFailed', ({path}) => {
       setFileError(path, 'error:parsingFileFailed');
     });
 
-    window.electron.ipc.on('error:fileNotFound', ({path}) => {
+    window.electron.ipcMain.on('error:fileNotFound', ({path}) => {
       setFileError(path, 'error:fileNotFound');
     });
 
-    window.electron.ipc.on('file:opened', ({path, table}) => {
+    window.electron.ipcMain.on('file:opened', ({path, table}) => {
       setFileLoaded(path, table);
     });
 
-    window.electron.ipc.on('file:closed', (path) => {
+    window.electron.ipcMain.on('file:closed', (path) => {
       removeFile(path);
       setSelectedTab(0);
     });
@@ -127,7 +127,7 @@ export default function Editor() {
                   <div
                     className="text-gray-800 hover:text-gray-600 focus:outline-none flex items-center justify-center"
                     onClick={() => {
-                      window.electron.ipc.send('file:close', path);
+                      window.electron.ipcMain.send('file:close', path);
                     }}
                   >
                     <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
