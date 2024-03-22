@@ -1,0 +1,7 @@
+[MASTER]
+py-version = 3.8
+extension-pkg-whitelist = PySide6
+ignore-paths = qdata/resources.py
+
+[MESSAGES CONTROL]
+max-line-length = 120

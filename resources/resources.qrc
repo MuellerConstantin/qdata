@@ -1,0 +1,17 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="favicons">
+        <file alias="favicon-dark.ico">favicons/favicon-dark.ico</file>
+        <file alias="favicon-light.ico">favicons/favicon-light.ico</file>
+    </qresource>
+    <qresource prefix="images">
+        <file alias="logo-dark.png">images/logo-dark.png</file>
+        <file alias="logo-light.png">images/logo-dark.png</file>
+        <file alias="logo-text-dark.png">images/logo-text-dark.png</file>
+        <file alias="logo-text-light.png">images/logo-text-dark.png</file>
+    </qresource>
+    <qresource prefix="icons"></qresource>
+    <qresource prefix="styles">
+        <file alias="global.qss">styles/global.qss</file>
+    </qresource>
+</RCC>

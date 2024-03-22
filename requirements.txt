@@ -1,0 +1,6 @@
+pytest
+pylint
+PySide6
+PyInstaller
+PyQvd
+pandas
