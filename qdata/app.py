@@ -2,13 +2,19 @@
 Module that contains the main application and window classes.
 """
 
+from multiprocessing import Process
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QFile, Qt
-from qdata import __version__
+from qdata import __version__, __app_name__
+from qdata.widgets.about import AboutDialog
 
 # pylint: disable-next=unused-import
 import qdata.resources
+
+def _run_new_window_process():
+    app = Application([])
+    app.exec()
 
 class MainWindow(QMainWindow):
     """
@@ -46,13 +52,14 @@ class MainWindow(QMainWindow):
         self._new_window_action = self._file_menu.addAction("&New Window")
         self._new_window_action.setShortcut("Ctrl+N")
         self._new_window_action.setToolTip("Open a new window")
+        self._new_window_action.triggered.connect(self._on_new_window)
 
         self._file_menu.addSeparator()
 
         self._exit_action = self._file_menu.addAction("&Exit")
         self._exit_action.setShortcut("Ctrl+Q")
         self._exit_action.setToolTip("Exit the application")
-        self._exit_action.triggered.connect(self.close)
+        self._exit_action.triggered.connect(self._on_exit)
 
         # Initialize edit menu actions
 
@@ -64,12 +71,24 @@ class MainWindow(QMainWindow):
 
         self._about_action = self._help_menu.addAction("&About")
         self._about_action.setToolTip("About the application")
+        self._about_action.triggered.connect(self._on_about)
 
     def _init_tool_bar(self):
         pass
 
     def _init_status_bar(self):
         self.statusBar().showMessage("Ready")
+
+    def _on_new_window(self):
+        new_window_process = Process(target=_run_new_window_process)
+        new_window_process.start()
+
+    def _on_exit(self):
+        self.close()
+
+    def _on_about(self):
+        about_dialog = AboutDialog(self)
+        about_dialog.exec()
 
 class Application(QApplication):
     """
@@ -78,8 +97,8 @@ class Application(QApplication):
     def __init__(self, argv):
         super().__init__(argv)
 
-        self.setApplicationName("QData")
-        self.setApplicationDisplayName("QData")
+        self.setApplicationName(__app_name__)
+        self.setApplicationDisplayName(__app_name__)
         self.setApplicationVersion(__version__)
         self.setStyle("Fusion")
 
