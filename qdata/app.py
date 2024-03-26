@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, Q
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QFile, QDir, Qt
 from qdata import __version__, __app_name__
+from qdata.widgets.qvd import QvdFileWidget
 from qdata.widgets.about import AboutDialog
 
 # pylint: disable-next=unused-import
@@ -137,7 +138,7 @@ class MainWindow(QMainWindow):
                 self._tab_widget.setCurrentIndex(tab_index)
                 return
 
-            tab_index = self._tab_widget.addTab(QWidget(), file_name)
+            tab_index = self._tab_widget.addTab(QvdFileWidget(file_path), file_name)
             self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
             self._tab_widget.tabBar().setTabData(tab_index, file_path)
             self._tab_widget.setCurrentIndex(tab_index)
