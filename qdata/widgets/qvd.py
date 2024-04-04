@@ -4,10 +4,12 @@ Contains widgets for displaying QVD files.
 
 from typing import Tuple
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel, QStyle, QTableView, QFrame
-from PySide6.QtCore import QThreadPool, Qt
+from PySide6.QtCore import QThreadPool, Qt, QModelIndex
 import pandas as pd
 from qdata.widgets.progress import Spinner
-from qdata.core.models import DataFrameTableModel
+from qdata.widgets.filter import FilterTagView, FilterTag
+from qdata.core.models.df import DataFrameTableModel
+from qdata.core.models.transform import DataFrameFilter, DataFrameFilterOperation
 from qdata.parallel.qvd import LoadQvdFileTask
 
 class QvdFileDataView(QWidget):
@@ -20,7 +22,14 @@ class QvdFileDataView(QWidget):
         self._table_model: DataFrameTableModel = None
 
         self._central_layout = QVBoxLayout()
+        self._central_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._central_layout)
+
+        self._filter_tag_view = FilterTagView()
+        self._filter_tag_view.setVisible(False)
+        self._filter_tag_view.add.connect(lambda: self._filter_tag_view.setVisible(True))
+        self._filter_tag_view.empty.connect(lambda: self._filter_tag_view.setVisible(False))
+        self._central_layout.addWidget(self._filter_tag_view)
 
         self._table_view = QTableView()
         self._table_view.setSortingEnabled(False)
@@ -29,7 +38,8 @@ class QvdFileDataView(QWidget):
         self._table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
         self._table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self._table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._central_layout.addWidget(self._table_view, 2)
+        self._table_view.doubleClicked.connect(self._on_cell_double_clicked)
+        self._central_layout.addWidget(self._table_view, 1)
 
     @property
     def data(self) -> pd.DataFrame:
@@ -40,11 +50,9 @@ class QvdFileDataView(QWidget):
 
     @data.setter
     def data(self, value: pd.DataFrame):
-        if self._table_model is None:
-            self._table_model = DataFrameTableModel(value)
-        else:
-            self._table_model.df = value
-
+        self._table_model = DataFrameTableModel(value)
+        self._table_model.begin_transform.connect(self._on_table_model_begin_transform)
+        self._table_model.end_transform.connect(self._on_table_model_end_transform)
         self._refresh()
 
     def get_selected_value(self) -> str:
@@ -60,6 +68,46 @@ class QvdFileDataView(QWidget):
     def _refresh(self):
         self._table_view.setModel(self._table_model)
 
+    def _add_filter(self, filter_: DataFrameFilter):
+        """
+        Add a filter to the table model.
+        """
+        filter_tag = FilterTag(filter_)
+        filter_tag.close.connect(lambda: self._filter_tag_view.remove_tag(filter_tag))
+        filter_tag.close.connect(lambda: self._remove_filter(filter_tag.filter))
+        self._filter_tag_view.add_tag(filter_tag)
+
+        self._table_model.add_filter(filter_)
+
+    def _remove_filter(self, filter_: DataFrameFilter):
+        """
+        Remove a filter from the table model.
+        """
+        self._table_model.remove_filter(filter_)
+
+    def _on_cell_double_clicked(self, index: QModelIndex):
+        """
+        Handle the cell being double clicked.
+        """
+        column_name = self._table_model.df.columns[index.column()]
+        column_value = self._table_model.df.iloc[index.row(), index.column()]
+
+        self._add_filter(DataFrameFilter(column_name, DataFrameFilterOperation.EQUAL, column_value))
+
+    def _on_table_model_begin_transform(self):
+        """
+        Handle the table model beginning to transform.
+        """
+        self._filter_tag_view.setEnabled(False)
+        self._table_view.setEnabled(False)
+
+    def _on_table_model_end_transform(self):
+        """
+        Handle the table model ending to transform.
+        """
+        self._filter_tag_view.setEnabled(True)
+        self._table_view.setEnabled(True)
+
 class QvdFileErrorView(QWidget):
     """
     Widget that represents a QVD file error view.
@@ -72,6 +120,7 @@ class QvdFileErrorView(QWidget):
         self._error_message: str = None
 
         self._central_layout = QVBoxLayout()
+        self._central_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._central_layout)
 
         self._central_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
@@ -125,6 +174,7 @@ class QvdFileLoadingView(QWidget):
         super().__init__(parent)
 
         self._central_layout = QVBoxLayout()
+        self._central_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._central_layout)
 
         self._spinner = Spinner()
@@ -146,6 +196,7 @@ class QvdFileWidget(QWidget):
         self._data: pd.DataFrame = None
 
         self._central_layout = QVBoxLayout()
+        self._central_layout.setContentsMargins(10, 10, 10, 10)
         self.setLayout(self._central_layout)
 
         self._loading_view = QvdFileLoadingView()
