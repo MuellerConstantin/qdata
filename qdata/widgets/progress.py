@@ -26,6 +26,8 @@ class Spinner(QWidget):
         return QSize(32, 32)
 
     def paintEvent(self, event: QPaintEvent) -> None:
+        super().paintEvent(event)
+
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 

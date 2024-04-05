@@ -3,11 +3,12 @@ Contains widgets for displaying QVD files.
 """
 
 from typing import Tuple
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel, QStyle, QTableView, QFrame
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel, QStyle
 from PySide6.QtCore import QThreadPool, Qt, QModelIndex
 import pandas as pd
 from qdata.widgets.progress import Spinner
 from qdata.widgets.filter import FilterTagView, FilterTag
+from qdata.widgets.df import DataFrameTableView
 from qdata.core.models.df import DataFrameTableModel
 from qdata.core.models.transform import DataFrameFilter, DataFrameFilterOperation
 from qdata.parallel.qvd import LoadQvdFileTask
@@ -31,13 +32,7 @@ class QvdFileDataView(QWidget):
         self._filter_tag_view.empty.connect(lambda: self._filter_tag_view.setVisible(False))
         self._central_layout.addWidget(self._filter_tag_view)
 
-        self._table_view = QTableView()
-        self._table_view.setSortingEnabled(True)
-        self._table_view.setStyleSheet("QTableView {border: 1px solid #d4d4d4;}")
-        self._table_view.setFrameStyle(QFrame.Shape.Panel | QFrame.Shadow.Raised)
-        self._table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
-        self._table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
-        self._table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table_view = DataFrameTableView()
         self._table_view.doubleClicked.connect(self._on_cell_double_clicked)
         self._central_layout.addWidget(self._table_view, 1)
 
@@ -100,6 +95,7 @@ class QvdFileDataView(QWidget):
         """
         self._filter_tag_view.setEnabled(False)
         self._table_view.setEnabled(False)
+        self._table_view.loading = True
 
     def _on_table_model_end_transform(self):
         """
@@ -107,6 +103,7 @@ class QvdFileDataView(QWidget):
         """
         self._filter_tag_view.setEnabled(True)
         self._table_view.setEnabled(True)
+        self._table_view.loading = False
 
 class QvdFileErrorView(QWidget):
     """
