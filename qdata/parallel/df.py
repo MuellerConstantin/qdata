@@ -19,7 +19,7 @@ class FilterDataFrameTaskSignals(QObject):
 
 class FilterDataFrameTask(QRunnable):
     """
-    Task for loading a QVD file.
+    Task for filtering a QVD file.
     """
     def __init__(self, df: pd.DataFrame, filters: List[DataFrameFilter]):
         super().__init__()
@@ -53,6 +53,48 @@ class FilterDataFrameTask(QRunnable):
                     self._df = self._df[column_values < compare_value]
                 elif filter_.operation == DataFrameFilterOperation.LESS_THAN_OR_EQUAL:
                     self._df = self._df[column_values <= compare_value]
+
+            self.signals.data.emit(self._df)
+        # pylint: disable-next=bare-except
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((value, exctype, traceback.format_exc()))
+        finally:
+            self.signals.finished.emit()
+
+class SortDataFrameTaskSignals(QObject):
+    """
+    Signals for the SortDataFrameTask class.
+    """
+    finished = Signal()
+    error = Signal(Exception)
+    data = Signal(pd.DataFrame)
+
+class SortDataFrameTask(QRunnable):
+    """
+    Task for sorting a QVD file.
+    """
+    def __init__(self, df: pd.DataFrame, column: str, ascending: bool):
+        super().__init__()
+
+        self.signals = SortDataFrameTaskSignals()
+        self._df = df
+        self._column = column
+        self._ascending = ascending
+
+    def run(self) -> None:
+        try:
+            column_types = self._df[self._column].apply(type).unique()
+
+            # Check if the column has multiple types
+            if len(column_types) > 1:
+                column_values = self._df[self._column].astype(str)
+            else:
+                column_values = self._df[self._column]
+
+            column_values = column_values.sort_values(ascending=self._ascending)
+            self._df = self._df.reindex(column_values.index)
 
             self.signals.data.emit(self._df)
         # pylint: disable-next=bare-except

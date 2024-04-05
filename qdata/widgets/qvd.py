@@ -32,7 +32,7 @@ class QvdFileDataView(QWidget):
         self._central_layout.addWidget(self._filter_tag_view)
 
         self._table_view = QTableView()
-        self._table_view.setSortingEnabled(False)
+        self._table_view.setSortingEnabled(True)
         self._table_view.setStyleSheet("QTableView {border: 1px solid #d4d4d4;}")
         self._table_view.setFrameStyle(QFrame.Shape.Panel | QFrame.Shadow.Raised)
         self._table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)

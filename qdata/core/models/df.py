@@ -8,7 +8,7 @@ from pandas.api.types import is_datetime64_any_dtype as is_datetime
 import pandas as pd
 import numpy as np
 from qdata.core.models.transform import DataFrameFilter
-from qdata.parallel import df
+from qdata.parallel.df import FilterDataFrameTask, SortDataFrameTask
 
 class DataFrameTableModelOptions:
     """
@@ -99,6 +99,24 @@ class DataFrameTableModel(QAbstractTableModel):
                     return self.df.index[section]
 
         return None
+
+    def sort(self, column: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder):
+        if self._base_df is None:
+            return
+
+        self._transforming = True
+        self.begin_transform.emit()
+        self.beginResetModel()
+
+        copy_df = self._base_df.copy()
+        column = copy_df.columns[column]
+
+        task = SortDataFrameTask(copy_df, column, order == Qt.SortOrder.AscendingOrder)
+        task.signals.data.connect(self._on_sort_task_data)
+        task.signals.error.connect(self._on_sort_task_error)
+        task.signals.finished.connect(self._on_sort_task_finished)
+
+        QThreadPool.globalInstance().start(task)
 
     @property
     def base_df(self) -> pd.DataFrame:
@@ -196,27 +214,48 @@ class DataFrameTableModel(QAbstractTableModel):
 
         copy_df = self._base_df.copy()
 
-        task = df.FilterDataFrameTask(copy_df, self._filters)
-        task.signals.data.connect(self._on_task_data)
-        task.signals.error.connect(self._on_task_error)
-        task.signals.finished.connect(self._on_task_finished)
+        task = FilterDataFrameTask(copy_df, self._filters)
+        task.signals.data.connect(self._on_filter_task_data)
+        task.signals.error.connect(self._on_filter_task_error)
+        task.signals.finished.connect(self._on_filter_task_finished)
 
         QThreadPool.globalInstance().start(task)
 
-    def _on_task_data(self, data: pd.DataFrame):
+    def _on_filter_task_data(self, data: pd.DataFrame):
         """
         Handle the task data.
         """
         self._transformed_df = data
 
 
-    def _on_task_error(self, error: Exception):
+    def _on_filter_task_error(self, error: Exception):
         """
         Handle the task error.
         """
         raise error
 
-    def _on_task_finished(self):
+    def _on_filter_task_finished(self):
+        """
+        Handle the task finishing.
+        """
+        self._transforming = False
+        self.end_transform.emit()
+        self.endResetModel()
+
+    def _on_sort_task_data(self, data: pd.DataFrame):
+        """
+        Handle the task data.
+        """
+        self._transformed_df = data
+
+
+    def _on_sort_task_error(self, error: Exception):
+        """
+        Handle the task error.
+        """
+        raise error
+
+    def _on_sort_task_finished(self):
         """
         Handle the task finishing.
         """
