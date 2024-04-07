@@ -3,8 +3,8 @@ Contains widgets for displaying QVD files.
 """
 
 from typing import Tuple
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel, QStyle
-from PySide6.QtCore import QThreadPool, Qt, QModelIndex
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel, QStyle, QMenu, QApplication
+from PySide6.QtCore import QThreadPool, Qt, QModelIndex, QPoint
 import pandas as pd
 from qdata.widgets.progress import Spinner
 from qdata.widgets.filter import FilterTagView, FilterTag
@@ -33,7 +33,7 @@ class QvdFileDataView(QWidget):
         self._central_layout.addWidget(self._filter_tag_view)
 
         self._table_view = DataFrameTableView()
-        self._table_view.doubleClicked.connect(self._on_cell_double_clicked)
+        self._table_view.customContextMenuRequested.connect(self._on_data_context_menu)
         self._central_layout.addWidget(self._table_view, 1)
 
     @property
@@ -80,15 +80,6 @@ class QvdFileDataView(QWidget):
         """
         self._table_model.remove_filter(filter_)
 
-    def _on_cell_double_clicked(self, index: QModelIndex):
-        """
-        Handle the cell being double clicked.
-        """
-        column_name = self._table_model.df.columns[index.column()]
-        column_value = self._table_model.df.iloc[index.row(), index.column()]
-
-        self._add_filter(DataFrameFilter(column_name, DataFrameFilterOperation.EQUAL, column_value))
-
     def _on_table_model_begin_transform(self):
         """
         Handle the table model beginning to transform.
@@ -104,6 +95,63 @@ class QvdFileDataView(QWidget):
         self._filter_tag_view.setEnabled(True)
         self._table_view.setEnabled(True)
         self._table_view.loading = False
+
+    def _on_context_menu_copy(self):
+        """
+        Handle the context menu copy action.
+        """
+        selected_value = self.get_selected_value()
+        QApplication.clipboard().setText(selected_value)
+
+    def _on_context_menu_filter(self, operation: DataFrameFilterOperation):
+        """
+        Handle the context menu filter action.
+        """
+        if self._table_view.selectedIndexes():
+            selected_index = self._table_view.selectedIndexes()[0]
+            column_name = self._table_model.df.columns[selected_index.column()]
+            column_value = self._table_model.df.iloc[selected_index.row(), selected_index.column()]
+
+            self._add_filter(DataFrameFilter(column_name, operation, column_value))
+
+    def _on_data_context_menu(self, pos: QPoint):
+        """
+        Handle the data context menu.
+        """
+        menu = QMenu(self)
+
+        copy_action = menu.addAction("Copy")
+        copy_action.triggered.connect(self._on_context_menu_copy)
+
+        menu.addSeparator()
+
+        filter_menu = menu.addMenu("Filter")
+
+        filter_equal_action = filter_menu.addAction("Equal")
+        filter_equal_action.triggered.connect(
+            lambda: self._on_context_menu_filter(DataFrameFilterOperation.EQUAL))
+
+        filter_not_equal_action = filter_menu.addAction("Not Equal")
+        filter_not_equal_action.triggered.connect(
+            lambda: self._on_context_menu_filter(DataFrameFilterOperation.NOT_EQUAL))
+
+        filter_greater_action = filter_menu.addAction("Greater Than")
+        filter_greater_action.triggered.connect(
+            lambda: self._on_context_menu_filter(DataFrameFilterOperation.GREATER_THAN))
+
+        filter_greater_equal_action = filter_menu.addAction("Greater Than or Equal")
+        filter_greater_equal_action.triggered.connect(
+            lambda: self._on_context_menu_filter(DataFrameFilterOperation.GREATER_THAN_OR_EQUAL))
+
+        filter_less_action = filter_menu.addAction("Less Than")
+        filter_less_action.triggered.connect(
+            lambda: self._on_context_menu_filter(DataFrameFilterOperation.LESS_THAN))
+
+        filter_less_equal_action = filter_menu.addAction("Less Than or Equal")
+        filter_less_equal_action.triggered.connect(
+            lambda: self._on_context_menu_filter(DataFrameFilterOperation.LESS_THAN_OR_EQUAL))
+
+        menu.exec_(self._table_view.mapToGlobal(pos))
 
 class QvdFileErrorView(QWidget):
     """

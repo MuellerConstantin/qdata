@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
         self._tab_widget.setMovable(True)
         self._tab_widget.setUsesScrollButtons(True)
         self._tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
+        self._tab_widget.currentChanged.connect(self._on_tab_changed)
         self._central_layout.addWidget(self._tab_widget)
 
     def _init_menu_bar(self):
@@ -93,6 +94,8 @@ class MainWindow(QMainWindow):
         self._copy_action = self._edit_menu.addAction(self.tr("&Copy"))
         self._copy_action.setShortcut("Ctrl+C")
         self._copy_action.setToolTip(self.tr("Copy selected text"))
+        self._copy_action.setEnabled(False)
+        self._copy_action.triggered.connect(self._on_copy)
 
         # Initialize help menu actions
 
@@ -149,12 +152,28 @@ class MainWindow(QMainWindow):
         """
         self.close()
 
+    def _on_copy(self):
+        """
+        Copy the selected text.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget:
+            selected_value = current_tab_widget.get_selected_value()
+            QApplication.clipboard().setText(selected_value)
+
     def _on_about(self):
         """
         Show the about dialog.
         """
         about_dialog = AboutDialog(self)
         about_dialog.exec()
+
+    def _on_tab_changed(self, index: int):
+        """
+        Called when the tab is changed.
+        """
+        self._copy_action.setEnabled(index != -1)
 
     def _on_tab_close_requested(self, index: int):
         """
@@ -167,9 +186,9 @@ class MainWindow(QMainWindow):
         Get the tab index by the file path. If the file is not open in any tab, return -1.
         """
         for index in range(self._tab_widget.count()):
-            tab_text = self._tab_widget.tabText(index)
+            tab_data = self._tab_widget.tabBar().tabData(index)
 
-            if tab_text == file_path:
+            if tab_data == file_path:
                 return index
 
         return -1
