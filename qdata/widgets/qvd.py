@@ -124,7 +124,7 @@ class QvdFileDataView(QWidget):
         menu = QMenu(self)
 
         copy_action = menu.addAction("Copy")
-        copy_action.triggered.connect(self._on_data_context_menu_copy)
+        copy_action.triggered.connect(lambda: self._on_data_context_menu_copy(pos))
 
         menu.addSeparator()
 
