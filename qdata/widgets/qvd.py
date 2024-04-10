@@ -3,8 +3,9 @@ Contains widgets for displaying QVD files.
 """
 
 from typing import Tuple
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel, QStyle, QMenu, QApplication
-from PySide6.QtCore import QThreadPool, Qt, QModelIndex, QPoint
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel, QStyle,
+                               QMenu, QApplication)
+from PySide6.QtCore import QThreadPool, Qt, QPoint
 import pandas as pd
 from qdata.widgets.progress import Spinner
 from qdata.widgets.filter import FilterTagView, FilterTag
@@ -33,6 +34,8 @@ class QvdFileDataView(QWidget):
         self._central_layout.addWidget(self._filter_tag_view)
 
         self._table_view = DataFrameTableView()
+        self._table_view.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table_view.horizontalHeader().customContextMenuRequested.connect(self._on_header_context_menu)
         self._table_view.customContextMenuRequested.connect(self._on_data_context_menu)
         self._central_layout.addWidget(self._table_view, 1)
 
@@ -96,23 +99,23 @@ class QvdFileDataView(QWidget):
         self._table_view.setEnabled(True)
         self._table_view.loading = False
 
-    def _on_context_menu_copy(self):
+    def _on_data_context_menu_copy(self, pos: QPoint):
         """
         Handle the context menu copy action.
         """
-        selected_value = self.get_selected_value()
-        QApplication.clipboard().setText(selected_value)
+        selected_index = self._table_view.indexAt(pos)
+        column_value = self._table_model.df.iloc[selected_index.row(), selected_index.column()]
+        QApplication.clipboard().setText(column_value)
 
-    def _on_context_menu_filter(self, operation: DataFrameFilterOperation):
+    def _on_data_context_menu_filter(self, pos: QPoint, operation: DataFrameFilterOperation):
         """
         Handle the context menu filter action.
         """
-        if self._table_view.selectedIndexes():
-            selected_index = self._table_view.selectedIndexes()[0]
-            column_name = self._table_model.df.columns[selected_index.column()]
-            column_value = self._table_model.df.iloc[selected_index.row(), selected_index.column()]
+        selected_index = self._table_view.indexAt(pos)
+        column_name = self._table_model.df.columns[selected_index.column()]
+        column_value = self._table_model.df.iloc[selected_index.row(), selected_index.column()]
 
-            self._add_filter(DataFrameFilter(column_name, operation, column_value))
+        self._add_filter(DataFrameFilter(column_name, operation, column_value))
 
     def _on_data_context_menu(self, pos: QPoint):
         """
@@ -121,7 +124,7 @@ class QvdFileDataView(QWidget):
         menu = QMenu(self)
 
         copy_action = menu.addAction("Copy")
-        copy_action.triggered.connect(self._on_context_menu_copy)
+        copy_action.triggered.connect(self._on_data_context_menu_copy)
 
         menu.addSeparator()
 
@@ -129,29 +132,48 @@ class QvdFileDataView(QWidget):
 
         filter_equal_action = filter_menu.addAction("Equal")
         filter_equal_action.triggered.connect(
-            lambda: self._on_context_menu_filter(DataFrameFilterOperation.EQUAL))
+            lambda: self._on_data_context_menu_filter(pos, DataFrameFilterOperation.EQUAL))
 
         filter_not_equal_action = filter_menu.addAction("Not Equal")
         filter_not_equal_action.triggered.connect(
-            lambda: self._on_context_menu_filter(DataFrameFilterOperation.NOT_EQUAL))
+            lambda: self._on_data_context_menu_filter(pos, DataFrameFilterOperation.NOT_EQUAL))
 
         filter_greater_action = filter_menu.addAction("Greater Than")
         filter_greater_action.triggered.connect(
-            lambda: self._on_context_menu_filter(DataFrameFilterOperation.GREATER_THAN))
+            lambda: self._on_data_context_menu_filter(pos, DataFrameFilterOperation.GREATER_THAN))
 
         filter_greater_equal_action = filter_menu.addAction("Greater Than or Equal")
         filter_greater_equal_action.triggered.connect(
-            lambda: self._on_context_menu_filter(DataFrameFilterOperation.GREATER_THAN_OR_EQUAL))
+            lambda: self._on_data_context_menu_filter(pos, DataFrameFilterOperation.GREATER_THAN_OR_EQUAL))
 
         filter_less_action = filter_menu.addAction("Less Than")
         filter_less_action.triggered.connect(
-            lambda: self._on_context_menu_filter(DataFrameFilterOperation.LESS_THAN))
+            lambda: self._on_data_context_menu_filter(pos, DataFrameFilterOperation.LESS_THAN))
 
         filter_less_equal_action = filter_menu.addAction("Less Than or Equal")
         filter_less_equal_action.triggered.connect(
-            lambda: self._on_context_menu_filter(DataFrameFilterOperation.LESS_THAN_OR_EQUAL))
+            lambda: self._on_data_context_menu_filter(pos, DataFrameFilterOperation.LESS_THAN_OR_EQUAL))
 
         menu.exec_(self._table_view.mapToGlobal(pos))
+
+    def _on_header_context_menu_copy_column_name(self, pos: QPoint):
+        """
+        Handle the header context menu copy column name action.
+        """
+        column_index = self._table_view.horizontalHeader().logicalIndexAt(pos)
+        column_name = self._table_model.df.columns[column_index]
+        QApplication.clipboard().setText(column_name)
+
+    def _on_header_context_menu(self, pos: QPoint):
+        """
+        Handle the header context menu.
+        """
+        menu = QMenu(self)
+
+        copy_column_name_action = menu.addAction("Copy Column Name")
+        copy_column_name_action.triggered.connect(lambda: self._on_header_context_menu_copy_column_name(pos))
+
+        menu.exec(self._table_view.horizontalHeader().mapToGlobal(pos))
 
 class QvdFileErrorView(QWidget):
     """
