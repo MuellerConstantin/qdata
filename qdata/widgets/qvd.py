@@ -3,9 +3,10 @@ Contains widgets for displaying QVD files.
 """
 
 from typing import Tuple
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel, QStyle,
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
                                QMenu, QApplication)
 from PySide6.QtCore import QThreadPool, Qt, QPoint
+from PySide6.QtGui import QIcon
 import pandas as pd
 from qdata.widgets.progress import Spinner
 from qdata.widgets.filter import FilterTagView, FilterTag
@@ -194,8 +195,7 @@ class QvdFileErrorView(QWidget):
 
         self._error_icon_label = QLabel()
         self._error_icon_label.setAlignment(Qt.AlignCenter)
-        self._error_icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxCritical)
-                                         .pixmap(64, 64))
+        self._error_icon_label.setPixmap(QIcon(":/icons/triangle-exclamation-amber-500.svg").pixmap(64, 64))
         self._central_layout.addWidget(self._error_icon_label)
 
         self._title_label = QLabel()

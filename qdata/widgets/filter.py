@@ -2,7 +2,7 @@
 Contains table related widgets.
 """
 
-from PySide6.QtWidgets import (QFrame, QWidget, QHBoxLayout, QLabel, QPushButton, QStyle,
+from PySide6.QtWidgets import (QFrame, QWidget, QHBoxLayout, QLabel, QPushButton,
                                QScrollArea, QSpacerItem, QSizePolicy)
 from PySide6.QtCore import Qt, Signal
 from qdata.core.models.transform import DataFrameFilter, DataFrameFilterOperation
@@ -35,8 +35,9 @@ class FilterTag(QFrame):
         self._central_layout.addWidget(self._title_label, 1)
 
         self._close_button = QPushButton()
-        self._close_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TabCloseButton))
-        self._close_button.setStyleSheet("QPushButton {padding: 0; border: 0;}")
+        self._close_button.setStyleSheet("QPushButton {padding: 0; border: 0; " +
+                                         "image: url(:/icons/xmark-neutral-800.svg);}")
+        self._close_button.setToolTip("Remove Filter")
         self._close_button.clicked.connect(self.close.emit)
         self._central_layout.addWidget(self._close_button)
 

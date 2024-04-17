@@ -10,7 +10,21 @@
         <file alias="logo-text-dark.png">images/logo-text-dark.png</file>
         <file alias="logo-text-light.png">images/logo-text-dark.png</file>
     </qresource>
-    <qresource prefix="icons"></qresource>
+    <qresource prefix="icons">
+        <file alias="chevron-left-neutral-800.svg">icons/chevron-left-neutral-800.svg</file>
+        <file alias="chevron-right-neutral-800.svg">icons/chevron-right-neutral-800.svg</file>
+        <file alias="chevron-up-neutral-800.svg">icons/chevron-up-neutral-800.svg</file>
+        <file alias="chevron-down-neutral-800.svg">icons/chevron-down-neutral-800.svg</file>
+        <file alias="chevron-left-neutral-400.svg">icons/chevron-left-neutral-400.svg</file>
+        <file alias="chevron-right-neutral-400.svg">icons/chevron-right-neutral-400.svg</file>
+        <file alias="chevron-up-neutral-400.svg">icons/chevron-up-neutral-400.svg</file>
+        <file alias="chevron-down-neutral-400.svg">icons/chevron-down-neutral-400.svg</file>
+        <file alias="xmark-neutral-500.svg">icons/xmark-neutral-500.svg</file>
+        <file alias="xmark-neutral-800.svg">icons/xmark-neutral-800.svg</file>
+        <file alias="sort-up-neutral-800.svg">icons/sort-up-neutral-800.svg</file>
+        <file alias="sort-down-neutral-800.svg">icons/sort-down-neutral-800.svg</file>
+        <file alias="triangle-exclamation-amber-500.svg">icons/triangle-exclamation-amber-500.svg</file>
+    </qresource>
     <qresource prefix="styles">
         <file alias="global.qss">styles/global.qss</file>
     </qresource>
