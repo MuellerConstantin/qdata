@@ -5,7 +5,7 @@ Contains widgets for displaying QVD files.
 from typing import Tuple
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
                                QMenu, QApplication)
-from PySide6.QtCore import QThreadPool, Qt, QPoint
+from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal
 from PySide6.QtGui import QIcon
 import pandas as pd
 from qdata.widgets.progress import Spinner
@@ -19,6 +19,8 @@ class QvdFileDataView(QWidget):
     """
     Widget that represents a QVD file data view.
     """
+    tableFiltered = Signal()
+
     def __init__(self, parent: QWidget = None):
         super().__init__(parent)
 
@@ -52,6 +54,7 @@ class QvdFileDataView(QWidget):
         self._table_model = DataFrameTableModel(value)
         self._table_model.begin_transform.connect(self._on_table_model_begin_transform)
         self._table_model.end_transform.connect(self._on_table_model_end_transform)
+        self._table_model.end_filtering.connect(self._on_table_model_end_filtering)
         self._refresh()
 
     def get_selected_value(self) -> str:
@@ -63,6 +66,33 @@ class QvdFileDataView(QWidget):
             return self._table_model.data(selected_index, Qt.ItemDataRole.DisplayRole)
 
         return None
+
+    def is_filtered(self) -> bool:
+        """
+        Check if the data is filtered.
+        """
+        if self._table_model is None:
+            return False
+
+        return len(self._table_model.filters) > 0
+
+    def get_data_shape(self) -> Tuple[int, int]:
+        """
+        Get the shape of the original data.
+        """
+        if self._table_model is None or self._table_model.base_df is None:
+            return None
+
+        return self._table_model.base_df.shape
+
+    def get_filtered_data_shape(self) -> Tuple[int, int]:
+        """
+        Get the shape of the filtered data.
+        """
+        if self._table_model is None or self._table_model.transformed_df is None:
+            return None
+
+        return self._table_model.transformed_df.shape
 
     def _refresh(self):
         self._table_view.setModel(self._table_model)
@@ -100,13 +130,19 @@ class QvdFileDataView(QWidget):
         self._table_view.setEnabled(True)
         self._table_view.loading = False
 
+    def _on_table_model_end_filtering(self):
+        """
+        Handle the table model ending to filter.
+        """
+        self.tableFiltered.emit()
+
     def _on_data_context_menu_copy(self, pos: QPoint):
         """
         Handle the context menu copy action.
         """
         selected_index = self._table_view.indexAt(pos)
         column_value = self._table_model.df.iloc[selected_index.row(), selected_index.column()]
-        QApplication.clipboard().setText(column_value)
+        QApplication.clipboard().setText(str(column_value))
 
     def _on_data_context_menu_filter(self, pos: QPoint, operation: DataFrameFilterOperation):
         """
@@ -163,7 +199,7 @@ class QvdFileDataView(QWidget):
         """
         column_index = self._table_view.horizontalHeader().logicalIndexAt(pos)
         column_name = self._table_model.df.columns[column_index]
-        QApplication.clipboard().setText(column_name)
+        QApplication.clipboard().setText(str(column_name))
 
     def _on_header_context_menu(self, pos: QPoint):
         """
@@ -254,6 +290,11 @@ class QvdFileWidget(QWidget):
     """
     QVD file widget, for displaying QVD files.
     """
+    tableLoading = Signal()
+    tableLoaded = Signal()
+    tableErrored = Signal()
+    tableFiltered = Signal()
+
     def __init__(self, path: str, parent: QWidget = None):
         super().__init__(parent)
 
@@ -276,6 +317,7 @@ class QvdFileWidget(QWidget):
 
         self._data_view = QvdFileDataView()
         self._data_view.setVisible(False)
+        self._data_view.tableFiltered.connect(self.tableFiltered)
         self._central_layout.addWidget(self._data_view)
 
         self._load_qvd_file()
@@ -299,14 +341,14 @@ class QvdFileWidget(QWidget):
         """
         Check if the file has finished loading.
         """
-        return not self._loading
+        return not self._loading and self._error is None
 
     @property
     def errored(self) -> bool:
         """
         Check if an error occurred while loading the file.
         """
-        return self.loaded and self._error is not None
+        return not self._loading and self._error is not None
 
     @property
     def error(self) -> Exception:
@@ -322,11 +364,29 @@ class QvdFileWidget(QWidget):
         """
         return self._data
 
+    def is_filtered(self) -> bool:
+        """
+        Check if the data is filtered.
+        """
+        return self._data_view.is_filtered()
+
     def get_selected_value(self) -> str:
         """
         Get the selected value in the table.
         """
         return self._data_view.get_selected_value()
+
+    def get_table_shape(self) -> Tuple[int, int]:
+        """
+        Get the shape of the table.
+        """
+        return self._data_view.get_data_shape()
+
+    def get_filtered_table_shape(self) -> Tuple[int, int]:
+        """
+        Get the shape of the filtered table.
+        """
+        return self._data_view.get_filtered_data_shape()
 
     def _refresh(self):
         """
@@ -336,18 +396,22 @@ class QvdFileWidget(QWidget):
             self._loading_view.setVisible(True)
             self._error_view.setVisible(False)
             self._data_view.setVisible(False)
+
+            self.tableLoading.emit()
         elif self._error is not None:
             self._loading_view.setVisible(False)
             self._error_view.setVisible(True)
             self._data_view.setVisible(False)
 
             self._error_view.error = self._error
+            self.tableErrored.emit()
         else:
             self._loading_view.setVisible(False)
             self._error_view.setVisible(False)
             self._data_view.setVisible(True)
 
             self._data_view.data = self._data
+            self.tableLoaded.emit()
 
     def _on_task_data(self, data: pd.DataFrame):
         """

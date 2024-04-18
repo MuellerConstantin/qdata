@@ -4,7 +4,8 @@ Module that contains the main application and window classes.
 
 import os
 from multiprocessing import Process
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QFileDialog
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
+                               QTabWidget, QFileDialog, QSpacerItem, QSizePolicy)
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QFile, QDir, Qt
 from qdata import __version__, __app_name__
@@ -112,7 +113,57 @@ class MainWindow(QMainWindow):
         """
         Initialize the status bar with widgets and labels.
         """
-        self.statusBar().showMessage("Ready")
+        self._status_widget = QWidget()
+        self._status_layout = QHBoxLayout()
+        self._status_layout.setContentsMargins(10, 5, 10, 5)
+        self._status_layout.setSpacing(36)
+        self._status_widget.setLayout(self._status_layout)
+        self.statusBar().addPermanentWidget(self._status_widget, 1)
+        self.statusBar().setSizeGripEnabled(False)
+
+        self._status_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
+
+        # Initialize table filtered shape status
+
+        self._table_filtered_shape_widget = QWidget()
+        self._table_filtered_shape_widget.setVisible(False)
+        self._table_filtered_shape_layout = QHBoxLayout()
+        self._table_filtered_shape_layout.setContentsMargins(0, 0, 0, 0)
+        self._table_filtered_shape_widget.setLayout(self._table_filtered_shape_layout)
+        self._status_layout.addWidget(self._table_filtered_shape_widget)
+
+        self._table_filtered_shape_titel_label = QLabel()
+        self._table_filtered_shape_titel_label.setText(self.tr("Filtered"))
+        self._table_filtered_shape_layout.addWidget(self._table_filtered_shape_titel_label)
+
+        self._table_filtered_shape_icon = QLabel()
+        self._table_filtered_shape_icon.setPixmap(QIcon(":/icons/table-green-600.svg").pixmap(12, 12))
+        self._table_filtered_shape_layout.addWidget(self._table_filtered_shape_icon)
+
+        self._table_filtered_shape_label = QLabel()
+        self._table_filtered_shape_label.setText("7x233")
+        self._table_filtered_shape_layout.addWidget(self._table_filtered_shape_label)
+
+        # Initialize table full shape status
+
+        self._table_full_shape_widget = QWidget()
+        self._table_full_shape_widget.setVisible(False)
+        self._table_full_shape_layout = QHBoxLayout()
+        self._table_full_shape_layout.setContentsMargins(0, 0, 0, 0)
+        self._table_full_shape_widget.setLayout(self._table_full_shape_layout)
+        self._status_layout.addWidget(self._table_full_shape_widget)
+
+        self._table_full_shape_titel_label = QLabel()
+        self._table_full_shape_titel_label.setText(self.tr("Full"))
+        self._table_full_shape_layout.addWidget(self._table_full_shape_titel_label)
+
+        self._table_full_shape_icon = QLabel()
+        self._table_full_shape_icon.setPixmap(QIcon(":/icons/table-neutral-800.svg").pixmap(12, 12))
+        self._table_full_shape_layout.addWidget(self._table_full_shape_icon)
+
+        self._table_full_shape_label = QLabel()
+        self._table_full_shape_label.setText("7x233")
+        self._table_full_shape_layout.addWidget(self._table_full_shape_label)
 
     def _on_new_window(self):
         """
@@ -141,7 +192,12 @@ class MainWindow(QMainWindow):
                 self._tab_widget.setCurrentIndex(tab_index)
                 return
 
-            tab_index = self._tab_widget.addTab(QvdFileWidget(file_path), file_name)
+            qvd_file_widget = QvdFileWidget(file_path)
+            qvd_file_widget.tableLoaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
+            qvd_file_widget.tableFiltered.connect(lambda: self._on_table_filtered(qvd_file_widget))
+            qvd_file_widget.tableErrored.connect(lambda: self._on_table_errored(qvd_file_widget))
+            qvd_file_widget.tableLoading.connect(lambda: self._on_table_loading(qvd_file_widget))
+            tab_index = self._tab_widget.addTab(qvd_file_widget, file_name)
             self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
             self._tab_widget.tabBar().setTabData(tab_index, file_path)
             self._tab_widget.setCurrentIndex(tab_index)
@@ -160,7 +216,7 @@ class MainWindow(QMainWindow):
 
         if current_tab_widget:
             selected_value = current_tab_widget.get_selected_value()
-            QApplication.clipboard().setText(selected_value)
+            QApplication.clipboard().setText(str(selected_value))
 
     def _on_about(self):
         """
@@ -173,7 +229,28 @@ class MainWindow(QMainWindow):
         """
         Called when the tab is changed.
         """
+        if index == -1:
+            self._table_full_shape_widget.setVisible(False)
+            self._table_filtered_shape_widget.setVisible(False)
+            return
+
         self._copy_action.setEnabled(index != -1)
+
+        current_tab_widget = self._tab_widget.widget(index)
+
+        if current_tab_widget.loaded:
+            self._table_full_shape_label.setText(
+                f"{current_tab_widget.get_table_shape()[1]}x{current_tab_widget.get_table_shape()[0]}")
+            self._table_full_shape_widget.setVisible(True)
+        else:
+            self._table_full_shape_widget.setVisible(False)
+
+        if current_tab_widget.loaded and current_tab_widget.is_filtered():
+            self._table_filtered_shape_label.setText(f"{current_tab_widget.get_filtered_table_shape()[1]}x" +
+                                                     f"{current_tab_widget.get_filtered_table_shape()[0]}")
+            self._table_filtered_shape_widget.setVisible(True)
+        else:
+            self._table_filtered_shape_widget.setVisible(False)
 
     def _on_tab_close_requested(self, index: int):
         """
@@ -198,6 +275,51 @@ class MainWindow(QMainWindow):
         Check if the file is already open in a tab.
         """
         return self._get_tab_index_by_file_path(file_path) != -1
+
+    def _on_table_loaded(self, qvd_file_widget: QvdFileWidget):
+        """
+        Called when the table is loaded.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget == qvd_file_widget:
+            self._table_full_shape_label.setText(
+                f"{qvd_file_widget.get_table_shape()[1]}x{qvd_file_widget.get_table_shape()[0]}")
+            self._table_full_shape_widget.setVisible(True)
+
+    def _on_table_filtered(self, qvd_file_widget: QvdFileWidget):
+        """
+        Called when the table is filtered.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget == qvd_file_widget:
+            if qvd_file_widget.is_filtered():
+                self._table_filtered_shape_label.setText(f"{qvd_file_widget.get_filtered_table_shape()[1]}x" +
+                                                         f"{qvd_file_widget.get_filtered_table_shape()[0]}")
+                self._table_filtered_shape_widget.setVisible(True)
+            else:
+                self._table_filtered_shape_widget.setVisible(False)
+
+    def _on_table_errored(self, qvd_file_widget: QvdFileWidget):
+        """
+        Called when the table is errored.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget == qvd_file_widget:
+            self._table_full_shape_widget.setVisible(False)
+            self._table_filtered_shape_widget.setVisible(False)
+
+    def _on_table_loading(self, qvd_file_widget: QvdFileWidget):
+        """
+        Called when the table is loading.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget == qvd_file_widget:
+            self._table_full_shape_widget.setVisible(False)
+            self._table_filtered_shape_widget.setVisible(False)
 
 class Application(QApplication):
     """

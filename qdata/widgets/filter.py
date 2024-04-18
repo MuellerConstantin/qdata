@@ -4,7 +4,8 @@ Contains table related widgets.
 
 from PySide6.QtWidgets import (QFrame, QWidget, QHBoxLayout, QLabel, QPushButton,
                                QScrollArea, QSpacerItem, QSizePolicy)
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtGui import QIcon
 from qdata.core.models.transform import DataFrameFilter, DataFrameFilterOperation
 
 class FilterTag(QFrame):
@@ -28,15 +29,21 @@ class FilterTag(QFrame):
 
         self._central_layout = QHBoxLayout()
         self._central_layout.setContentsMargins(5, 5, 5, 5)
+        self._central_layout.setSpacing(5)
         self.setLayout(self._central_layout)
+
+        self._icon_label = QLabel()
+        self._icon_label.setPixmap(QIcon(":/icons/filter-neutral-800.svg").pixmap(12, 12))
+        self._central_layout.addWidget(self._icon_label)
 
         self._title_label = QLabel()
         self._title_label.setText(self._filter.column)
         self._central_layout.addWidget(self._title_label, 1)
 
         self._close_button = QPushButton()
+        self._close_button.setIconSize(QSize(16, 16))
         self._close_button.setStyleSheet("QPushButton {padding: 0; border: 0; " +
-                                         "image: url(:/icons/xmark-neutral-800.svg);}")
+                                         "qproperty-icon: url(:/icons/xmark-neutral-800.svg);}")
         self._close_button.setToolTip("Remove Filter")
         self._close_button.clicked.connect(self.close.emit)
         self._central_layout.addWidget(self._close_button)

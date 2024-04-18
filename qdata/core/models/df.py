@@ -47,6 +47,10 @@ class DataFrameTableModel(QAbstractTableModel):
     """
     begin_transform = Signal()
     end_transform = Signal()
+    begin_filtering = Signal()
+    end_filtering = Signal()
+    begin_sorting = Signal()
+    end_sorting = Signal()
 
     def __init__(self, base_df: pd.DataFrame = None,
                  options: DataFrameTableModelOptions = DataFrameTableModelOptions()):
@@ -106,6 +110,7 @@ class DataFrameTableModel(QAbstractTableModel):
 
         self._transforming = True
         self.begin_transform.emit()
+        self.begin_sorting.emit()
         self.beginResetModel()
 
         copy_df = self._base_df.copy()
@@ -210,6 +215,7 @@ class DataFrameTableModel(QAbstractTableModel):
 
         self._transforming = True
         self.begin_transform.emit()
+        self.begin_filtering.emit()
         self.beginResetModel()
 
         copy_df = self._base_df.copy()
@@ -240,6 +246,7 @@ class DataFrameTableModel(QAbstractTableModel):
         """
         self._transforming = False
         self.end_transform.emit()
+        self.end_filtering.emit()
         self.endResetModel()
 
     def _on_sort_task_data(self, data: pd.DataFrame):
@@ -261,4 +268,5 @@ class DataFrameTableModel(QAbstractTableModel):
         """
         self._transforming = False
         self.end_transform.emit()
+        self.end_sorting.emit()
         self.endResetModel()
