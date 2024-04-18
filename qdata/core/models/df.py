@@ -105,7 +105,7 @@ class DataFrameTableModel(QAbstractTableModel):
         return None
 
     def sort(self, column: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder):
-        if self._base_df is None:
+        if self.df is None:
             return
 
         self._transforming = True
@@ -113,7 +113,7 @@ class DataFrameTableModel(QAbstractTableModel):
         self.begin_sorting.emit()
         self.beginResetModel()
 
-        copy_df = self._base_df.copy()
+        copy_df = self.df.copy()
         column = copy_df.columns[column]
 
         task = SortDataFrameTask(copy_df, column, order == Qt.SortOrder.AscendingOrder)
