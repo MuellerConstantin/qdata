@@ -51,10 +51,10 @@ class AboutDialog(QDialog):
         self._license_text.setPlainText(__license_text__)
         self._central_layout.addWidget(self._license_text, 2)
 
-        self._central_layout.addSpacerItem(QSpacerItem(0, 10, QSizePolicy.Policy.Minimum,
+        self._central_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum,
                                                        QSizePolicy.Policy.MinimumExpanding))
 
-        self._dialog_button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        self._dialog_button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         self._dialog_button_box.button(QDialogButtonBox.Ok).setProperty("class", "primary")
         self._dialog_button_box.accepted.connect(self.accept)
         self._central_layout.addWidget(self._dialog_button_box)

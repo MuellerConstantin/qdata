@@ -14,6 +14,8 @@ class DataFrameFilterOperation(Enum):
     GREATER_THAN_OR_EQUAL = "ge"
     LESS_THAN = "lt"
     LESS_THAN_OR_EQUAL = "le"
+    BEGINS_WITH = "bw"
+    ENDS_WITH = "ew"
 
 class DataFrameFilter:
     """

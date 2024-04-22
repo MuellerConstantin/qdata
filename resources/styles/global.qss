@@ -81,7 +81,7 @@ QMenu::item {
     padding: 8px;
     background-color: transparent;
     min-width: 50px;
-    max-width: 200px;
+    max-width: 600px;
 }
 
 QMenu::item:selected {
@@ -97,6 +97,16 @@ QMenu::separator {
 
 QMenu::item:disabled {
     color: #a3a3a3;
+}
+
+QMenu::right-arrow {
+    image: url(:/icons/chevron-right-neutral-800.svg);
+    width: 12px;
+    height: 12px;
+}
+
+QMenu::right-arrow:selected {
+    image: url(:/icons/chevron-right-white.svg);
 }
 
 /* -------- QTabWidget -------- */
@@ -332,9 +342,29 @@ QTextEdit {
     background-color: #ffffff;
     border: 1px solid #e4e4e7;
     border-radius: 2px;
+    padding: 4px;
     height: 36px;
     selection-color: #ffffff;
     selection-background-color: #16a34a;
+    padding: 2px;
+}
+
+QTextEdit:focus {
+    border: 1px solid #16a34a;
+}
+
+QLineEdit {
+    color: #262626;
+    background-color: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 2px;
+    padding: 4px;
+    selection-color: #ffffff;
+    selection-background-color: #16a34a;
+}
+
+QLineEdit:focus {
+    border: 1px solid #16a34a;
 }
 
 /* -------- QPushButton -------- */

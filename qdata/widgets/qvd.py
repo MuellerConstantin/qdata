@@ -4,7 +4,7 @@ Contains widgets for displaying QVD files.
 
 from typing import Tuple
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
-                               QMenu, QApplication)
+                               QMenu, QApplication, QDialog, QLineEdit, QDialogButtonBox)
 from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal
 from PySide6.QtGui import QIcon
 import pandas as pd
@@ -14,6 +14,72 @@ from qdata.widgets.df import DataFrameTableView
 from qdata.core.models.df import DataFrameTableModel
 from qdata.core.models.transform import DataFrameFilter, DataFrameFilterOperation
 from qdata.parallel.qvd import LoadQvdFileTask
+
+class QvdFileFieldValuesDialog(QDialog):
+    """
+    Dialog for displaying field values.
+    """
+    def __init__(self, field_values: pd.DataFrame, parent: QWidget = None):
+        super().__init__(parent)
+
+        self._field_values = field_values
+        self._table_model = DataFrameTableModel(self._field_values)
+        self._table_model.end_filtering.connect(self._on_table_model_end_filtering)
+        self._current_filter = None
+
+        self.setWindowTitle(self.tr("Field Values"))
+        self.setFixedSize(300, 400)
+        self.setWindowIcon(QIcon(":/favicons/favicon-dark.ico"))
+
+        self._central_layout = QVBoxLayout()
+        self._central_layout.setContentsMargins(10, 10, 10, 10)
+        self._central_layout.setSpacing(10)
+        self.setLayout(self._central_layout)
+
+        self._search_line_edit = QLineEdit()
+        self._search_line_edit.addAction(QIcon(":/icons/magnifying-glass-green-600.svg"),
+                                         QLineEdit.ActionPosition.LeadingPosition)
+        self._search_line_edit.setPlaceholderText(self.tr("Search..."))
+        self._search_line_edit.textChanged.connect(self._on_search_line_edit_text_changed)
+        self._central_layout.addWidget(self._search_line_edit)
+
+        self._table_view = DataFrameTableView()
+        self._table_view.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table_view.setModel(self._table_model)
+        self._central_layout.addWidget(self._table_view, 1)
+
+        self._found_values_label = QLabel(self.tr("Found Values: ") + str(len(self._field_values)))
+        self._found_values_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self._central_layout.addWidget(self._found_values_label)
+
+        self._total_values_label = QLabel(self.tr("Total Values: ") + str(len(self._field_values)))
+        self._total_values_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self._central_layout.addWidget(self._total_values_label)
+
+        self._central_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum,
+                                                       QSizePolicy.Policy.MinimumExpanding))
+
+        self._dialog_button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply |
+                                                   QDialogButtonBox.StandardButton.Cancel)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self.accept)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.reject)
+        self._central_layout.addWidget(self._dialog_button_box)
+
+    def _on_search_line_edit_text_changed(self, text: str):
+        """
+        Handle the search line edit text changed.
+        """
+        if self._current_filter is not None:
+            self._table_model.remove_filter(self._current_filter)
+
+        self._current_filter = DataFrameFilter("Value", DataFrameFilterOperation.BEGINS_WITH, text)
+        self._table_model.add_filter(self._current_filter)
+
+    def _on_table_model_end_filtering(self):
+        """
+        Handle the table model ending to filter.
+        """
+        self._found_values_label.setText(self.tr("Found Values: ") + str(len(self._table_model.df)))
 
 class QvdFileDataView(QWidget):
     """
@@ -201,6 +267,20 @@ class QvdFileDataView(QWidget):
         column_name = self._table_model.df.columns[column_index]
         QApplication.clipboard().setText(str(column_name))
 
+    def _on_header_context_field_values(self, pos: QPoint):
+        """
+        Handle the header context menu field values action.
+        """
+        column_index = self._table_view.horizontalHeader().logicalIndexAt(pos)
+        column_name = self._table_model.df.columns[column_index]
+
+        value_counts = self._table_model.df[column_name].value_counts()
+        field_values = pd.DataFrame(value_counts).reset_index()
+        field_values.columns = [self.tr("Value"), self.tr("Count")]
+
+        dialog = QvdFileFieldValuesDialog(field_values, self)
+        dialog.exec()
+
     def _on_header_context_menu(self, pos: QPoint):
         """
         Handle the header context menu.
@@ -209,6 +289,9 @@ class QvdFileDataView(QWidget):
 
         copy_column_name_action = menu.addAction("Copy Column Name")
         copy_column_name_action.triggered.connect(lambda: self._on_header_context_menu_copy_column_name(pos))
+
+        field_values_action = menu.addAction("Field Values")
+        field_values_action.triggered.connect(lambda: self._on_header_context_field_values(pos))
 
         menu.exec(self._table_view.horizontalHeader().mapToGlobal(pos))
 

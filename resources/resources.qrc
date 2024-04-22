@@ -17,6 +17,7 @@
         <file alias="chevron-down-neutral-800.svg">icons/chevron-down-neutral-800.svg</file>
         <file alias="chevron-left-neutral-400.svg">icons/chevron-left-neutral-400.svg</file>
         <file alias="chevron-right-neutral-400.svg">icons/chevron-right-neutral-400.svg</file>
+        <file alias="chevron-right-white.svg">icons/chevron-right-white.svg</file>
         <file alias="chevron-up-neutral-400.svg">icons/chevron-up-neutral-400.svg</file>
         <file alias="chevron-down-neutral-400.svg">icons/chevron-down-neutral-400.svg</file>
         <file alias="xmark-neutral-500.svg">icons/xmark-neutral-500.svg</file>
@@ -27,6 +28,7 @@
         <file alias="table-neutral-800.svg">icons/table-neutral-800.svg</file>
         <file alias="table-green-600.svg">icons/table-green-600.svg</file>
         <file alias="filter-neutral-800.svg">icons/filter-neutral-800.svg</file>
+        <file alias="magnifying-glass-green-600.svg">icons/magnifying-glass-green-600.svg</file>
     </qresource>
     <qresource prefix="styles">
         <file alias="global.qss">styles/global.qss</file>

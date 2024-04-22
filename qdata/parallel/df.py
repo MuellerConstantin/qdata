@@ -31,15 +31,20 @@ class FilterDataFrameTask(QRunnable):
     def run(self) -> None:
         try:
             for filter_ in self._filters:
-                column_types = self._df[filter_.column].apply(type).unique()
-
-                # Check if the column has multiple types
-                if len(column_types) > 1:
+                if filter_.operation in [DataFrameFilterOperation.BEGINS_WITH,
+                                         DataFrameFilterOperation.ENDS_WITH]:
                     column_values = self._df[filter_.column].astype(str)
                     compare_value = str(filter_.value)
                 else:
-                    column_values = self._df[filter_.column]
-                    compare_value = filter_.value
+                    column_types = self._df[filter_.column].apply(type).unique()
+
+                    # Check if the column has multiple types
+                    if len(column_types) > 1:
+                        column_values = self._df[filter_.column].astype(str)
+                        compare_value = str(filter_.value)
+                    else:
+                        column_values = self._df[filter_.column]
+                        compare_value = filter_.value
 
                 if filter_.operation == DataFrameFilterOperation.EQUAL:
                     self._df = self._df[column_values == compare_value]
@@ -53,6 +58,10 @@ class FilterDataFrameTask(QRunnable):
                     self._df = self._df[column_values < compare_value]
                 elif filter_.operation == DataFrameFilterOperation.LESS_THAN_OR_EQUAL:
                     self._df = self._df[column_values <= compare_value]
+                elif filter_.operation == DataFrameFilterOperation.BEGINS_WITH:
+                    self._df = self._df[column_values.str.startswith(compare_value)]
+                elif filter_.operation == DataFrameFilterOperation.ENDS_WITH:
+                    self._df = self._df[column_values.str.endswith(compare_value)]
 
             self.signals.data.emit(self._df)
         # pylint: disable-next=bare-except

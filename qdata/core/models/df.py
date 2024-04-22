@@ -2,7 +2,7 @@
 Contains the models for handling tabular data.
 """
 
-from typing import List
+from typing import List, Tuple
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal, QThreadPool
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 import pandas as pd
@@ -234,11 +234,11 @@ class DataFrameTableModel(QAbstractTableModel):
         self._transformed_df = data
 
 
-    def _on_filter_task_error(self, error: Exception):
+    def _on_filter_task_error(self, error: Tuple[Exception, type, str]):
         """
         Handle the task error.
         """
-        raise error
+        raise error[0]
 
     def _on_filter_task_finished(self):
         """
