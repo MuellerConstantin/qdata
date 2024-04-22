@@ -81,6 +81,7 @@ QMenu::item {
     padding: 8px;
     background-color: transparent;
     min-width: 50px;
+    max-width: 200px;
 }
 
 QMenu::item:selected {

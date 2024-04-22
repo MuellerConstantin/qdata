@@ -3,12 +3,13 @@ Module that contains the main application and window classes.
 """
 
 import os
+import functools
 from multiprocessing import Process
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
                                QTabWidget, QFileDialog, QSpacerItem, QSizePolicy)
 from PySide6.QtGui import QIcon
-from PySide6.QtCore import QFile, QDir, Qt
-from qdata import __version__, __app_name__
+from PySide6.QtCore import QFile, QDir, Qt, QSettings
+from qdata import __version__, __app_name__, __organization__
 from qdata.widgets.qvd import QvdFileWidget
 from qdata.widgets.about import AboutDialog
 
@@ -82,6 +83,11 @@ class MainWindow(QMainWindow):
         self._open_file_action.setShortcut("Ctrl+O")
         self._open_file_action.setToolTip(self.tr("Open a file"))
         self._open_file_action.triggered.connect(self._on_open_file)
+
+        self._recent_files_menu = self._file_menu.addMenu(self.tr("&Open Recent File"))
+        recent_files = list(QSettings(QSettings.Scope.UserScope).value("recentFiles", [], list))
+        self._on_recent_files_changed(recent_files)
+        self._recent_files_menu.setEnabled(bool(recent_files))
 
         self._file_menu.addSeparator()
 
@@ -185,22 +191,7 @@ class MainWindow(QMainWindow):
 
         if file_dialog_result:
             file_path = file_dialog.selectedFiles()[0]
-            file_name = os.path.basename(file_path)
-
-            if self._is_file_already_open(file_path):
-                tab_index = self._get_tab_index_by_file_path(file_path)
-                self._tab_widget.setCurrentIndex(tab_index)
-                return
-
-            qvd_file_widget = QvdFileWidget(file_path)
-            qvd_file_widget.tableLoaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
-            qvd_file_widget.tableFiltered.connect(lambda: self._on_table_filtered(qvd_file_widget))
-            qvd_file_widget.tableErrored.connect(lambda: self._on_table_errored(qvd_file_widget))
-            qvd_file_widget.tableLoading.connect(lambda: self._on_table_loading(qvd_file_widget))
-            tab_index = self._tab_widget.addTab(qvd_file_widget, file_name)
-            self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
-            self._tab_widget.tabBar().setTabData(tab_index, file_path)
-            self._tab_widget.setCurrentIndex(tab_index)
+            self._on_open_qvd_file(file_path)
 
     def _on_exit(self):
         """
@@ -232,9 +223,10 @@ class MainWindow(QMainWindow):
         if index == -1:
             self._table_full_shape_widget.setVisible(False)
             self._table_filtered_shape_widget.setVisible(False)
+            self._copy_action.setEnabled(False)
             return
 
-        self._copy_action.setEnabled(index != -1)
+        self._copy_action.setEnabled(True)
 
         current_tab_widget = self._tab_widget.widget(index)
 
@@ -311,6 +303,17 @@ class MainWindow(QMainWindow):
             self._table_full_shape_widget.setVisible(False)
             self._table_filtered_shape_widget.setVisible(False)
 
+        # Remove file from recent files list
+        settings = QSettings(QSettings.Scope.UserScope)
+        recent_files = list(QSettings(QSettings.Scope.UserScope).value("recentFiles", [], list))
+
+        try:
+            recent_files.remove(qvd_file_widget.path)
+            settings.setValue('recentFiles', recent_files)
+            self._on_recent_files_changed(recent_files)
+        except ValueError:
+            pass
+
     def _on_table_loading(self, qvd_file_widget: QvdFileWidget):
         """
         Called when the table is loading.
@@ -321,6 +324,77 @@ class MainWindow(QMainWindow):
             self._table_full_shape_widget.setVisible(False)
             self._table_filtered_shape_widget.setVisible(False)
 
+    def _on_recent_files_changed(self, recent_files: list):
+        """
+        Called when the recent files list is changed.
+        """
+        self._recent_files_menu.clear()
+
+        # pylint: disable-next=invalid-name
+        MAX_RECENT_FILES = 5
+
+        for _, recent_file in enumerate(recent_files[:MAX_RECENT_FILES]):
+            action = self._recent_files_menu.addAction(recent_file)
+            action.setToolTip(recent_file)
+            action.triggered.connect(functools.partial(self._on_open_recent_file, recent_file))
+
+        self._recent_files_menu.addSeparator()
+
+        clear_recent_files_action = self._recent_files_menu.addAction(self.tr("Clear Recent Files"))
+        clear_recent_files_action.triggered.connect(self._on_clear_recent_files)
+
+        self._recent_files_menu.setEnabled(bool(recent_files))
+
+    def _on_clear_recent_files(self):
+        """
+        Clear the recent files list.
+        """
+        settings = QSettings(QSettings.Scope.UserScope)
+        settings.setValue('recentFiles', [])
+
+        self._on_recent_files_changed([])
+
+    def _on_open_recent_file(self, file_path: str):
+        """
+        Open a recent file.
+        """
+        self._on_open_qvd_file(file_path)
+
+    def _on_open_qvd_file(self, file_path: str):
+        """
+        Open a QVD file.
+        """
+        if self._is_file_already_open(file_path):
+            tab_index = self._get_tab_index_by_file_path(file_path)
+            self._tab_widget.setCurrentIndex(tab_index)
+            return
+
+        file_name = os.path.basename(file_path)
+
+        qvd_file_widget = QvdFileWidget(file_path)
+        qvd_file_widget.tableLoaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
+        qvd_file_widget.tableFiltered.connect(lambda: self._on_table_filtered(qvd_file_widget))
+        qvd_file_widget.tableErrored.connect(lambda: self._on_table_errored(qvd_file_widget))
+        qvd_file_widget.tableLoading.connect(lambda: self._on_table_loading(qvd_file_widget))
+        tab_index = self._tab_widget.addTab(qvd_file_widget, file_name)
+        self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
+        self._tab_widget.tabBar().setTabData(tab_index, file_path)
+        self._tab_widget.setCurrentIndex(tab_index)
+
+        # Update recent files list
+        settings = QSettings(QSettings.Scope.UserScope)
+        recent_files = list(QSettings(QSettings.Scope.UserScope).value("recentFiles", [], list))
+
+        try:
+            recent_files.remove(file_path)
+        except ValueError:
+            pass
+
+        recent_files.insert(0, str(file_path))
+        settings.setValue('recentFiles', recent_files)
+
+        self._on_recent_files_changed(recent_files)
+
 class Application(QApplication):
     """
     Main application class that initializes the main window and starts the event loop.
@@ -328,7 +402,10 @@ class Application(QApplication):
     def __init__(self, argv):
         super().__init__(argv)
 
+        QSettings.setDefaultFormat(QSettings.Format.IniFormat)
+
         self.setApplicationName(__app_name__)
+        self.setOrganizationName(__organization__)
         self.setApplicationDisplayName(__app_name__)
         self.setApplicationVersion(__version__)
         self.setStyle("Fusion")

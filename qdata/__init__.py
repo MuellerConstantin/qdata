@@ -2,10 +2,11 @@
 Root package for qdata.
 """
 
-__version__ = '0.1.0'
-__app_name__ = 'QData'
-__author__ = 'Constantin Müller'
-__license__ = 'MIT'
+__version__ = "0.1.0"
+__app_name__ = "QData"
+__organization__ = "QData"
+__author__ = "Constantin Müller"
+__license__ = "MIT"
 __license_text__ = "MIT License\n\n" \
     "Permission is hereby granted, free of charge, to any person obtaining a " \
     "copy of this software and associated documentation files " \
