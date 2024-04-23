@@ -34,6 +34,8 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(600, 400)
         self.setWindowIcon(QIcon(":/favicons/favicon-dark.ico"))
 
+        self.resize(800, 600)
+
         style_sheet_file = QFile(":/styles/global.qss")
         style_sheet_file.open(QFile.ReadOnly)
         self.setStyleSheet(style_sheet_file.readAll().toStdString())
