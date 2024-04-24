@@ -10,7 +10,9 @@
  * neutral-500: #737373
  * neutral-800: #262626
  *
+ * green-300: #86efac
  * green-600: #16a34a
+ * green-700: #15803d
  *
  * red-500: #ef4444
  */
@@ -20,6 +22,7 @@
 QWidget {
     background-color: #fafafa;
     color: #262626;
+    font-size: 12px;
 }
 
 /* -------- QFrame -------- */
@@ -383,6 +386,22 @@ QPushButton:hover {
 
 QPushButton:disabled {
     color: #a3a3a3;
+}
+
+QPushButton:flat {
+    margin: 0px;
+    color: #16a34a;
+    border: none;
+    padding: 0px;
+    background-color: transparent;
+}
+
+QPushButton:flat:hover {
+    text-decoration: underline;
+}
+
+QPushButton:flat:disabled {
+    color: #86efac;
 }
 
 /* -------- QToolTip -------- */

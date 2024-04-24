@@ -29,6 +29,8 @@
         <file alias="table-green-600.svg">icons/table-green-600.svg</file>
         <file alias="filter-neutral-800.svg">icons/filter-neutral-800.svg</file>
         <file alias="magnifying-glass-green-600.svg">icons/magnifying-glass-green-600.svg</file>
+        <file alias="file-circle-plus-green-600.svg">icons/file-circle-plus-green-600.svg</file>
+        <file alias="qvd-file.svg">icons/qvd-file.svg</file>
     </qresource>
     <qresource prefix="styles">
         <file alias="global.qss">styles/global.qss</file>

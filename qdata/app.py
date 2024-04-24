@@ -12,6 +12,7 @@ from PySide6.QtCore import QFile, QDir, Qt, QSettings
 from qdata import __version__, __app_name__, __organization__
 from qdata.widgets.qvd import QvdFileWidget
 from qdata.widgets.about import AboutDialog
+from qdata.widgets.welcome import WelcomeWidget
 
 # pylint: disable-next=unused-import
 import qdata.resources
@@ -64,6 +65,17 @@ class MainWindow(QMainWindow):
         self._tab_widget.currentChanged.connect(self._on_tab_changed)
         self._central_layout.addWidget(self._tab_widget)
 
+        # Initialize welcome widget
+
+        self._welcome_widget = WelcomeWidget()
+        self._welcome_widget.open_file.connect(self._on_open_file)
+        self._welcome_widget.open_recent.connect(self._on_open_recent_file)
+
+        tab_index = self._tab_widget.addTab(self._welcome_widget, "Welcome")
+        self._tab_widget.tabBar().setTabToolTip(tab_index, "Welcome to QData")
+        self._tab_widget.tabBar().setTabIcon(tab_index, QIcon(":/favicons/favicon-dark.ico"))
+        self._tab_widget.setCurrentIndex(tab_index)
+
     def _init_menu_bar(self):
         """
         Initialize the menu bar with menus and actions.
@@ -107,6 +119,10 @@ class MainWindow(QMainWindow):
         self._copy_action.triggered.connect(self._on_copy)
 
         # Initialize help menu actions
+
+        self._welcome_action = self._help_menu.addAction(self.tr("&Welcome"))
+        self._welcome_action.setToolTip(self.tr("Show the welcome tab"))
+        self._welcome_action.triggered.connect(self._on_welcome)
 
         self._about_action = self._help_menu.addAction(self.tr("&About"))
         self._about_action.setToolTip(self.tr("Show the about dialog"))
@@ -211,6 +227,20 @@ class MainWindow(QMainWindow):
             selected_value = current_tab_widget.get_selected_value()
             QApplication.clipboard().setText(str(selected_value))
 
+    def _on_welcome(self):
+        """
+        Show the welcome tab.
+        """
+        if self._is_welcome_tab_already_open():
+            welcome_tab_index = self._get_welcome_tab_index()
+            self._tab_widget.setCurrentIndex(welcome_tab_index)
+            return
+
+        welcome_tab_index = self._tab_widget.addTab(self._welcome_widget, "Welcome")
+        self._tab_widget.tabBar().setTabToolTip(welcome_tab_index, "Welcome to QData")
+        self._tab_widget.tabBar().setTabIcon(welcome_tab_index, QIcon(":/favicons/favicon-dark.ico"))
+        self._tab_widget.setCurrentIndex(welcome_tab_index)
+
     def _on_about(self):
         """
         Show the about dialog.
@@ -222,7 +252,7 @@ class MainWindow(QMainWindow):
         """
         Called when the tab is changed.
         """
-        if index == -1:
+        if index == -1 or self._tab_widget.widget(index) == self._welcome_widget:
             self._table_full_shape_widget.setVisible(False)
             self._table_filtered_shape_widget.setVisible(False)
             self._copy_action.setEnabled(False)
@@ -269,6 +299,24 @@ class MainWindow(QMainWindow):
         Check if the file is already open in a tab.
         """
         return self._get_tab_index_by_file_path(file_path) != -1
+
+    def _get_welcome_tab_index(self) -> int:
+        """
+        Get the welcome tab index. If the welcome tab is not open, return -1.
+        """
+        for index in range(self._tab_widget.count()):
+            tab_widget = self._tab_widget.widget(index)
+
+            if tab_widget == self._welcome_widget:
+                return index
+
+        return -1
+
+    def _is_welcome_tab_already_open(self) -> bool:
+        """
+        Check if the welcome tab is already open.
+        """
+        return self._get_welcome_tab_index() != -1
 
     def _on_table_loaded(self, qvd_file_widget: QvdFileWidget):
         """
@@ -347,6 +395,9 @@ class MainWindow(QMainWindow):
 
         self._recent_files_menu.setEnabled(bool(recent_files))
 
+        if hasattr(self, "_welcome_widget") and self._welcome_widget:
+            self._welcome_widget.update_recent_files()
+
     def _on_clear_recent_files(self):
         """
         Clear the recent files list.
@@ -381,6 +432,7 @@ class MainWindow(QMainWindow):
         tab_index = self._tab_widget.addTab(qvd_file_widget, file_name)
         self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
         self._tab_widget.tabBar().setTabData(tab_index, file_path)
+        self._tab_widget.tabBar().setTabIcon(tab_index, QIcon(":/icons/qvd-file.svg"))
         self._tab_widget.setCurrentIndex(tab_index)
 
         # Update recent files list

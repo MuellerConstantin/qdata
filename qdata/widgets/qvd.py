@@ -41,7 +41,7 @@ class QvdFileFieldValuesDialog(QDialog):
 
         self._column_name_label = QLabel(self._column)
         self._column_name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._column_name_label.setStyleSheet("font-weight: bold;")
+        self._column_name_label.setStyleSheet("font-size: 16px; font-weight: semi-bold;")
         self._central_layout.addWidget(self._column_name_label)
 
         self._search_line_edit = QLineEdit()
