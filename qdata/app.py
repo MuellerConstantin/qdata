@@ -103,6 +103,12 @@ class MainWindow(QMainWindow):
         self._on_recent_files_changed(recent_files)
         self._recent_files_menu.setEnabled(bool(recent_files))
 
+        self._close_file_action = self._file_menu.addAction(self.tr("&Close File"))
+        self._close_file_action.setShortcut("Ctrl+F4")
+        self._close_file_action.setToolTip(self.tr("Close the current file"))
+        self._close_file_action.setEnabled(False)
+        self._close_file_action.triggered.connect(self._on_close_file)
+
         self._file_menu.addSeparator()
 
         self._exit_action = self._file_menu.addAction(self.tr("&Exit"))
@@ -211,6 +217,17 @@ class MainWindow(QMainWindow):
             file_path = file_dialog.selectedFiles()[0]
             self._on_open_qvd_file(file_path)
 
+    def _on_close_file(self):
+        """
+        Close the current file.
+        """
+        current_tab_index = self._tab_widget.currentIndex()
+
+        if current_tab_index == -1:
+            return
+
+        self._tab_widget.removeTab(current_tab_index)
+
     def _on_exit(self):
         """
         Exit the application.
@@ -256,9 +273,11 @@ class MainWindow(QMainWindow):
             self._table_full_shape_widget.setVisible(False)
             self._table_filtered_shape_widget.setVisible(False)
             self._copy_action.setEnabled(False)
+            self._close_file_action.setEnabled(False)
             return
 
         self._copy_action.setEnabled(True)
+        self._close_file_action.setEnabled(True)
 
         current_tab_widget = self._tab_widget.widget(index)
 

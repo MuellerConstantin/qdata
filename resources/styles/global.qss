@@ -25,6 +25,16 @@ QWidget {
     font-size: 12px;
 }
 
+/* -------- QStackedWidget -------- */
+
+QStackedWidget {
+    border: none;
+}
+
+QStackedWidget > QFrame {
+    border: none;
+}
+
 /* -------- QFrame -------- */
 
 QFrame {
@@ -338,7 +348,7 @@ QLabel {
     color: #262626;
 }
 
-/* -------- QInput -------- */
+/* -------- QTextEdit -------- */
 
 QTextEdit {
     color: #262626;
@@ -355,6 +365,8 @@ QTextEdit {
 QTextEdit:focus {
     border: 1px solid #16a34a;
 }
+
+/* -------- QLineEdit -------- */
 
 QLineEdit {
     color: #262626;
