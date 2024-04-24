@@ -4,7 +4,8 @@ Contains widgets for displaying QVD files.
 
 from typing import Tuple
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
-                               QMenu, QApplication, QDialog, QLineEdit, QDialogButtonBox)
+                               QMenu, QApplication, QDialog, QLineEdit, QDialogButtonBox,
+                               QStackedWidget)
 from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal
 from PySide6.QtGui import QIcon
 import pandas as pd
@@ -145,7 +146,7 @@ class QvdFileFieldValuesDialog(QDialog):
         filter_less_equal_action.triggered.connect(
             lambda: self._on_data_context_menu_filter(pos, DataFrameFilterOperation.LESS_THAN_OR_EQUAL))
 
-        menu.exec_(self._table_view.mapToGlobal(pos))
+        menu.exec(self._table_view.mapToGlobal(pos))
 
 class QvdFileDataView(QWidget):
     """
@@ -159,7 +160,7 @@ class QvdFileDataView(QWidget):
         self._table_model: DataFrameTableModel = None
 
         self._central_layout = QVBoxLayout()
-        self._central_layout.setContentsMargins(0, 0, 0, 0)
+        self._central_layout.setContentsMargins(10, 10, 10, 10)
         self.setLayout(self._central_layout)
 
         self._filter_tag_view = FilterTagView()
@@ -326,7 +327,7 @@ class QvdFileDataView(QWidget):
         filter_less_equal_action.triggered.connect(
             lambda: self._on_data_context_menu_filter(pos, DataFrameFilterOperation.LESS_THAN_OR_EQUAL))
 
-        menu.exec_(self._table_view.mapToGlobal(pos))
+        menu.exec(self._table_view.mapToGlobal(pos))
 
     def _on_header_context_menu_copy_column_name(self, pos: QPoint):
         """
@@ -380,7 +381,7 @@ class QvdFileErrorView(QWidget):
         self._error_message: str = None
 
         self._central_layout = QVBoxLayout()
-        self._central_layout.setContentsMargins(0, 0, 0, 0)
+        self._central_layout.setContentsMargins(10, 10, 10, 10)
         self.setLayout(self._central_layout)
 
         self._central_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
@@ -433,7 +434,7 @@ class QvdFileLoadingView(QWidget):
         super().__init__(parent)
 
         self._central_layout = QVBoxLayout()
-        self._central_layout.setContentsMargins(0, 0, 0, 0)
+        self._central_layout.setContentsMargins(10, 10, 10, 10)
         self.setLayout(self._central_layout)
 
         self._spinner = Spinner()
@@ -442,7 +443,7 @@ class QvdFileLoadingView(QWidget):
 
         self._central_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
-class QvdFileWidget(QWidget):
+class QvdFileWidget(QStackedWidget):
     """
     QVD file widget, for displaying QVD files.
     """
@@ -455,26 +456,19 @@ class QvdFileWidget(QWidget):
         super().__init__(parent)
 
         self._path = path
-        self._loading: bool = True
+        self._loading: bool = False
         self._error: Exception = None
         self._data: pd.DataFrame = None
 
-        self._central_layout = QVBoxLayout()
-        self._central_layout.setContentsMargins(10, 10, 10, 10)
-        self.setLayout(self._central_layout)
-
-        self._loading_view = QvdFileLoadingView()
-        self._loading_view.setVisible(True)
-        self._central_layout.addWidget(self._loading_view)
+        self._data_view = QvdFileDataView()
+        self._data_view.tableFiltered.connect(self.tableFiltered)
+        self.addWidget(self._data_view)
 
         self._error_view = QvdFileErrorView()
-        self._error_view.setVisible(False)
-        self._central_layout.addWidget(self._error_view)
+        self.addWidget(self._error_view)
 
-        self._data_view = QvdFileDataView()
-        self._data_view.setVisible(False)
-        self._data_view.tableFiltered.connect(self.tableFiltered)
-        self._central_layout.addWidget(self._data_view)
+        self._loading_view = QvdFileLoadingView()
+        self.addWidget(self._loading_view)
 
         self._load_qvd_file()
 
@@ -549,24 +543,18 @@ class QvdFileWidget(QWidget):
         Refresh the widget.
         """
         if self._loading:
-            self._loading_view.setVisible(True)
-            self._error_view.setVisible(False)
-            self._data_view.setVisible(False)
+            self.setCurrentWidget(self._loading_view)
 
             self.tableLoading.emit()
         elif self._error is not None:
-            self._loading_view.setVisible(False)
-            self._error_view.setVisible(True)
-            self._data_view.setVisible(False)
-
             self._error_view.error = self._error
+            self.setCurrentWidget(self._error_view)
+
             self.tableErrored.emit()
         else:
-            self._loading_view.setVisible(False)
-            self._error_view.setVisible(False)
-            self._data_view.setVisible(True)
-
             self._data_view.data = self._data
+            self.setCurrentWidget(self._data_view)
+
             self.tableLoaded.emit()
 
     def _on_task_data(self, data: pd.DataFrame):
@@ -592,6 +580,9 @@ class QvdFileWidget(QWidget):
         """
         Load the QVD file.
         """
+        self._loading = True
+        self.setCurrentWidget(self._loading_view)
+
         task = LoadQvdFileTask(self._path)
         task.signals.data.connect(self._on_task_data)
         task.signals.error.connect(self._on_task_error)
