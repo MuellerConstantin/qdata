@@ -1,6 +1,6 @@
 pytest
 pylint
+nuitka
 PySide6
-PyInstaller
 PyQvd
 pandas
