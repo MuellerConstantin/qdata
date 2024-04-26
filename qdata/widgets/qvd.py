@@ -5,7 +5,7 @@ Contains widgets for displaying QVD files.
 from typing import Tuple
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
                                QMenu, QApplication, QDialog, QLineEdit, QDialogButtonBox,
-                               QStackedWidget)
+                               QStackedWidget, QGridLayout)
 from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal
 from PySide6.QtGui import QIcon
 import pandas as pd
@@ -59,13 +59,18 @@ class QvdFileFieldValuesDialog(QDialog):
         self._table_view.setModel(self._table_model)
         self._central_layout.addWidget(self._table_view, 1)
 
-        self._found_values_label = QLabel(self.tr("Found Values: ") + str(len(self._field_values)))
-        self._found_values_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._central_layout.addWidget(self._found_values_label)
+        self._kpi_layout = QGridLayout()
+        self._kpi_layout.setContentsMargins(0, 0, 0, 0)
+        self._kpi_layout.setSpacing(5)
+        self._central_layout.addLayout(self._kpi_layout)
 
         self._total_values_label = QLabel(self.tr("Total Values: ") + str(len(self._field_values)))
         self._total_values_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._central_layout.addWidget(self._total_values_label)
+        self._kpi_layout.addWidget(self._total_values_label, 0, 0)
+
+        self._found_values_label = QLabel(self.tr("Found Values: ") + str(len(self._field_values)))
+        self._found_values_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self._kpi_layout.addWidget(self._found_values_label, 1, 0)
 
         self._central_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum,
                                                        QSizePolicy.Policy.MinimumExpanding))
@@ -344,7 +349,7 @@ class QvdFileDataView(QWidget):
         column_index = self._table_view.horizontalHeader().logicalIndexAt(pos)
         column_name = self._table_model.df.columns[column_index]
 
-        value_counts = self._table_model.df[column_name].value_counts()
+        value_counts = self._table_model.df[column_name].value_counts(dropna=False)
         field_values = pd.DataFrame(value_counts).reset_index()
         field_values.columns = [self.tr("Value"), self.tr("Count")]
 

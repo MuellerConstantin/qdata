@@ -4,6 +4,7 @@ Contains the models for handling tabular data.
 
 from typing import List, Tuple
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal, QThreadPool
+from PySide6.QtGui import QFont
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 import pandas as pd
 import numpy as np
@@ -86,6 +87,12 @@ class DataFrameTableModel(QAbstractTableModel):
                 return self._format_data_value(value)
             elif role == Qt.ItemDataRole.UserRole:
                 return value
+            elif role == Qt.ItemDataRole.FontRole:
+                if value is None:
+                    font = QFont()
+                    font.setItalic(True)
+
+                    return font
 
         return None
 
@@ -183,6 +190,9 @@ class DataFrameTableModel(QAbstractTableModel):
         """
         Format a data value for display.
         """
+        if value is None:
+            return "N/A"
+
         if is_datetime(type(value)):
             return value.strftime(self._options.datetime_format)
 

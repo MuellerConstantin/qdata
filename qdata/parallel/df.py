@@ -31,20 +31,27 @@ class FilterDataFrameTask(QRunnable):
     def run(self) -> None:
         try:
             for filter_ in self._filters:
-                if filter_.operation in [DataFrameFilterOperation.BEGINS_WITH,
-                                         DataFrameFilterOperation.ENDS_WITH]:
+                # Separate handling when filtering for equality with None (missing values)
+                if (filter_.value is None and (filter_.operation == DataFrameFilterOperation.EQUAL or
+                                              filter_.operation == DataFrameFilterOperation.NOT_EQUAL)):
+                    if filter_.operation == DataFrameFilterOperation.EQUAL:
+                        self._df = self._df[self._df[filter_.column].isnull()]
+                    elif filter_.operation == DataFrameFilterOperation.NOT_EQUAL:
+                        self._df = self._df[self._df[filter_.column].notnull()]
+
+                    continue
+
+                column_types = self._df[filter_.column].apply(type).unique()
+                column_types = [_type for _type in column_types if _type != type(None)]
+
+                # Handle values as strings if multiple types are present or operation is string-based
+                if (len(column_types) > 1) or (filter_.operation in [DataFrameFilterOperation.BEGINS_WITH,
+                                                                     DataFrameFilterOperation.ENDS_WITH]):
                     column_values = self._df[filter_.column].astype(str)
                     compare_value = str(filter_.value)
                 else:
-                    column_types = self._df[filter_.column].apply(type).unique()
-
-                    # Check if the column has multiple types
-                    if len(column_types) > 1:
-                        column_values = self._df[filter_.column].astype(str)
-                        compare_value = str(filter_.value)
-                    else:
-                        column_values = self._df[filter_.column]
-                        compare_value = filter_.value
+                    column_values = self._df[filter_.column]
+                    compare_value = filter_.value
 
                 if filter_.operation == DataFrameFilterOperation.EQUAL:
                     self._df = self._df[column_values == compare_value]
