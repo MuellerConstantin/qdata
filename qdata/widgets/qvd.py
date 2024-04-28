@@ -5,8 +5,8 @@ Contains widgets for displaying QVD files.
 from typing import Tuple
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
                                QMenu, QApplication, QDialog, QLineEdit, QDialogButtonBox,
-                               QStackedWidget, QGridLayout)
-from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal
+                               QStackedWidget, QGridLayout, QMessageBox)
+from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal, QFileSystemWatcher
 from PySide6.QtGui import QIcon
 import pandas as pd
 from qdata.widgets.progress import Spinner
@@ -53,6 +53,7 @@ class QvdFileFieldValuesDialog(QDialog):
         self._central_layout.addWidget(self._search_line_edit)
 
         self._table_view = DataFrameTableView()
+        self._table_view.setEditTriggers(DataFrameTableView.EditTrigger.NoEditTriggers)
         self._table_view.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._table_view.customContextMenuRequested.connect(self._on_data_context_menu)
         self._table_view.setSelectionBehavior(DataFrameTableView.SelectionBehavior.SelectRows)
@@ -465,6 +466,10 @@ class QvdFileWidget(QStackedWidget):
         self._error: Exception = None
         self._data: pd.DataFrame = None
 
+        self._file_watcher = QFileSystemWatcher()
+        self._file_watcher.addPath(self._path)
+        self._file_watcher.fileChanged.connect(self._on_file_changed)
+
         self._data_view = QvdFileDataView()
         self._data_view.tableFiltered.connect(self.tableFiltered)
         self.addWidget(self._data_view)
@@ -580,6 +585,29 @@ class QvdFileWidget(QStackedWidget):
         """
         self._loading = False
         self._refresh()
+
+    def _on_file_changed(self):
+        """
+        Handle the file changed.
+        """
+        # Pause the file watcher
+        self._file_watcher.removePath(self._path)
+
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.Question)
+        message_box.setWindowTitle(self.tr("File Changed"))
+        message_box.setText(self.tr("The following file has been changed:") + "\n" + self._path + "\n\n" +
+                            self.tr("Do you want to reload the file?"))
+        message_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        message_box.setDefaultButton(QMessageBox.StandardButton.Yes)
+
+        decision = message_box.exec()
+
+        # Resume the file watcher
+        self._file_watcher.addPath(self._path)
+
+        if decision == QMessageBox.StandardButton.Yes:
+            self._load_qvd_file()
 
     def _load_qvd_file(self):
         """
