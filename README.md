@@ -16,11 +16,25 @@
 
 ## Introduction
 
-QData is a program for viewing and editing Qlik View/Sense data files, so-called QVDs. This
-enables BI developers to view QVD files without having to load them into Qlik Sense via
-an ETL (Extract-Transform-Load) process. This saves time and resources. Therefor QData
-uses the QVD reader/writer library [PyQvd](https://github.com/MuellerConstantin/PyQvd)
-internally.
+QData is a desktop application for viewing and editing files in the proprietary
+Qlik View Data (QVD) format. The application is written in Python and uses the
+[PyQvd](https://github.com/MuellerConstantin/PyQvd) library to process QVD files
+internally. The application allows you to view the contents of a QVD file, edit
+the data, and save the changes back to the file. This enables BI developers to
+view and edit QVD files without having to load them into Qlik Sense/Qlik View.
+
+<p float="left">
+  <img src="docs/images/application-welcome-view.png" width="45%" alt="Welcome View" />
+  <img src="docs/images/application-file-view.png" width="45%" alt="File View" />
+</p>
+
+With QData you can: Analyze the structure of a QVD file, view the data in a
+structured table, edit the data in the table, and save the changes back to the
+file. The application is designed to be simple and easy to use, with a clean
+interface that makes it easy to navigate and use. With just a few clicks you
+can search for missing values and duplicates. Filters can be applied to the
+data and the data can be sorted based on individual values. Furthermore, you
+can also search for values and much more.
 
 ## License
 
