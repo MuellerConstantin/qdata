@@ -382,6 +382,19 @@ QLineEdit:focus {
     border: 1px solid #16a34a;
 }
 
+QTableView QLineEdit {
+    color: #262626;
+    background-color: #ffffff;
+    border: 1px solid unset;
+    border-radius: unset;
+    padding: unset;
+    padding-left: unset;
+    height: unset;
+    border-width: unset;
+    border-top-left-radius: unset;
+    border-top-right-radius: unset;
+}
+
 /* -------- QPushButton -------- */
 
 QPushButton {

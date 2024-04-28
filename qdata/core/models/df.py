@@ -77,7 +77,7 @@ class DataFrameTableModel(QAbstractTableModel):
 
     # pylint: disable-next=unused-argument
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
     def data(self, index: QModelIndex, role: int = ...) -> object:
         if index.isValid() and self.df is not None:
@@ -110,6 +110,28 @@ class DataFrameTableModel(QAbstractTableModel):
                     return self.df.index[section]
 
         return None
+
+    def setData(self, index: QModelIndex, value: object, role: int = ...) -> bool:
+        if index.isValid() and self.df is not None:
+            if role == Qt.ItemDataRole.EditRole:
+                # try convert the value to int or float
+                try:
+                    value = int(value)
+                except ValueError:
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        pass
+
+                self.base_df.iloc[index.row(), index.column()] = value
+
+                # Update the transformed DataFrame if it exists as well
+                if self.transformed_df is not None:
+                    self._transformed_df.iloc[index.row(), index.column()] = value
+
+                return True
+
+        return False
 
     def sort(self, column: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder):
         if self.df is None:
