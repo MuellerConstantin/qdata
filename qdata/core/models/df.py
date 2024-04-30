@@ -123,11 +123,15 @@ class DataFrameTableModel(QAbstractTableModel):
                     except ValueError:
                         pass
 
-                self.base_df.iloc[index.row(), index.column()] = value
+                # Convert view index to pandas index
+                pandas_index = self.df.index[index.row()]
+
+                # Update the base DataFrame
+                self.base_df.loc[pandas_index, self.df.columns[index.column()]] = value
 
                 # Update the transformed DataFrame if it exists as well
                 if self.transformed_df is not None:
-                    self._transformed_df.iloc[index.row(), index.column()] = value
+                    self._transformed_df.loc[pandas_index, self.df.columns[index.column()]] = value
 
                 return True
 
@@ -265,7 +269,6 @@ class DataFrameTableModel(QAbstractTableModel):
         """
         self._transformed_df = data
 
-
     def _on_filter_task_error(self, error: Tuple[Exception, type, str]):
         """
         Handle the task error.
@@ -286,7 +289,6 @@ class DataFrameTableModel(QAbstractTableModel):
         Handle the task data.
         """
         self._transformed_df = data
-
 
     def _on_sort_task_error(self, error: Exception):
         """

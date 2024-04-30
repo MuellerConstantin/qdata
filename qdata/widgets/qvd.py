@@ -176,7 +176,6 @@ class QvdFileDataView(QWidget):
         self._central_layout.addWidget(self._filter_tag_view)
 
         self._table_view = DataFrameTableView()
-        self._table_view.setEditTriggers(DataFrameTableView.EditTrigger.NoEditTriggers)
         self._table_view.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._table_view.horizontalHeader().customContextMenuRequested.connect(self._on_header_context_menu)
         self._table_view.customContextMenuRequested.connect(self._on_data_context_menu)
