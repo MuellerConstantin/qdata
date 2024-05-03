@@ -154,13 +154,34 @@ QTabBar::tab:selected {
 }
 
 QTabBar::close-button {
-    image: url(:/icons/xmark-neutral-500.svg);
+    image: url(:/icons/xmark-neutral-800.svg);
     subcontrol-position: right;
     padding: 2px;
 }
 
-QTabBar::close-button:selected {
+QTabBar QPushButton[role="close"] {
     image: url(:/icons/xmark-neutral-800.svg);
+    padding: 2px;
+    margin: 0px;
+    border: none;
+    background-color: transparent;
+    width: 16px;
+    height: 16px;
+}
+
+QTabBar QPushButton[role="unsaved-changes"] {
+    image: url(:/icons/circle-neutral-800.svg);
+    padding: 6px;
+    margin: 0px;
+    border: none;
+    background-color: transparent;
+    width: 16px;
+    height: 16px;
+}
+
+QTabBar QPushButton:hover[role="unsaved-changes"] {
+    image: url(:/icons/xmark-neutral-800.svg);
+    padding: 2px;
 }
 
 QTabBar::scroller {

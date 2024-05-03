@@ -6,7 +6,8 @@ import os
 import functools
 from multiprocessing import Process
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
-                               QTabWidget, QTabBar, QFileDialog, QSpacerItem, QSizePolicy, QPushButton)
+                               QTabWidget, QTabBar, QFileDialog, QSpacerItem, QSizePolicy, QPushButton,
+                               QMessageBox)
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QFile, QDir, Qt, QSettings
 from qdata import __version__, __app_name__, __organization__
@@ -340,7 +341,27 @@ class MainWindow(QMainWindow):
         """
         Close the tab at the given index.
         """
-        self._tab_widget.removeTab(index)
+        tab_widget = self._tab_widget.widget(index)
+
+        if tab_widget == self._welcome_widget or not tab_widget.unsaved_changes:
+            self._tab_widget.removeTab(index)
+            return
+
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.Question)
+        message_box.setWindowTitle(self.tr("Unsaved Changes"))
+        message_box.setText(self.tr("Your changes will be lost if you don't save them. Do you want " +
+                                    "to save the changes?"))
+        message_box.setStandardButtons(QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard |
+                                        QMessageBox.StandardButton.Cancel)
+        message_box.setDefaultButton(QMessageBox.StandardButton.Save)
+
+        decision = message_box.exec()
+
+        if decision == QMessageBox.StandardButton.Discard:
+            self._tab_widget.removeTab(index)
+        elif decision == QMessageBox.StandardButton.Save:
+            self._tab_widget.removeTab(index)
 
     def _get_tab_index_by_file_path(self, file_path: str) -> int:
         """
@@ -456,6 +477,15 @@ class MainWindow(QMainWindow):
         """
         Called when the table has unsaved changes.
         """
+        tab_index = self._tab_widget.indexOf(qvd_file_widget)
+        close_button = self._tab_widget.tabBar().tabButton(tab_index, QTabBar.ButtonPosition.RightSide)
+
+        if unsaved_changes:
+            close_button.setProperty("role", "unsaved-changes")
+        else:
+            close_button.setProperty("role", "close")
+
+        close_button.style().polish(close_button)
 
     def _on_recent_files_changed(self, recent_files: list):
         """
@@ -520,6 +550,13 @@ class MainWindow(QMainWindow):
         self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
         self._tab_widget.tabBar().setTabData(tab_index, file_path)
         self._tab_widget.tabBar().setTabIcon(tab_index, QIcon(":/icons/qvd-file.svg"))
+
+        close_button = QPushButton(self)
+        close_button.setProperty("role", "close")
+        close_button.setToolTip(self.tr("Close Tab"))
+        close_button.clicked.connect(lambda: self._tab_widget.tabBar().tabCloseRequested.emit(tab_index))
+        self._tab_widget.tabBar().setTabButton(tab_index, QTabBar.ButtonPosition.RightSide, close_button)
+
         self._tab_widget.setCurrentIndex(tab_index)
 
         # Update recent files list
