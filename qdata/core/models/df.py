@@ -52,6 +52,7 @@ class DataFrameTableModel(QAbstractTableModel):
     end_filtering = Signal()
     begin_sorting = Signal()
     end_sorting = Signal()
+    data_edited = Signal(int, int, object, object)
 
     def __init__(self, base_df: pd.DataFrame = None,
                  options: DataFrameTableModelOptions = DataFrameTableModelOptions()):
@@ -113,7 +114,7 @@ class DataFrameTableModel(QAbstractTableModel):
 
     def setData(self, index: QModelIndex, value: object, role: int = ...) -> bool:
         if index.isValid() and self.df is not None:
-            if role == Qt.ItemDataRole.EditRole:
+            if role == Qt.ItemDataRole.EditRole or role == Qt.ItemDataRole.UserRole:
                 # try convert the value to int or float
                 try:
                     value = int(value)
@@ -125,6 +126,10 @@ class DataFrameTableModel(QAbstractTableModel):
 
                 # Convert view index to pandas index
                 pandas_index = self.df.index[index.row()]
+                previous_value = self.df.loc[pandas_index, self.df.columns[index.column()]]
+
+                if previous_value == value:
+                    return False
 
                 # Update the base DataFrame
                 self.base_df.loc[pandas_index, self.df.columns[index.column()]] = value
@@ -132,6 +137,12 @@ class DataFrameTableModel(QAbstractTableModel):
                 # Update the transformed DataFrame if it exists as well
                 if self.transformed_df is not None:
                     self._transformed_df.loc[pandas_index, self.df.columns[index.column()]] = value
+
+                self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+
+                # Emit the data edited signal only if data was actually edited by the user
+                if role == Qt.ItemDataRole.EditRole:
+                    self.data_edited.emit(index.row(), index.column(), previous_value, value)
 
                 return True
 

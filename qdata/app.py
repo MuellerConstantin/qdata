@@ -6,7 +6,7 @@ import os
 import functools
 from multiprocessing import Process
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
-                               QTabWidget, QFileDialog, QSpacerItem, QSizePolicy)
+                               QTabWidget, QTabBar, QFileDialog, QSpacerItem, QSizePolicy, QPushButton)
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QFile, QDir, Qt, QSettings
 from qdata import __version__, __app_name__, __organization__
@@ -117,6 +117,20 @@ class MainWindow(QMainWindow):
         self._exit_action.triggered.connect(self._on_exit)
 
         # Initialize edit menu actions
+
+        self._undo_action = self._edit_menu.addAction(self.tr("&Undo"))
+        self._undo_action.setShortcut("Ctrl+Z")
+        self._undo_action.setToolTip(self.tr("Undo the last action"))
+        self._undo_action.setEnabled(False)
+        self._undo_action.triggered.connect(self._on_undo)
+
+        self._redo_action = self._edit_menu.addAction(self.tr("&Redo"))
+        self._redo_action.setShortcut("Ctrl+Y")
+        self._redo_action.setToolTip(self.tr("Redo the last action"))
+        self._redo_action.setEnabled(False)
+        self._redo_action.triggered.connect(self._on_redo)
+
+        self._edit_menu.addSeparator()
 
         self._copy_action = self._edit_menu.addAction(self.tr("&Copy"))
         self._copy_action.setShortcut("Ctrl+C")
@@ -244,6 +258,24 @@ class MainWindow(QMainWindow):
             selected_value = current_tab_widget.get_selected_value()
             QApplication.clipboard().setText(str(selected_value))
 
+    def _on_undo(self):
+        """
+        Undo the last action.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget:
+            current_tab_widget.undo()
+
+    def _on_redo(self):
+        """
+        Redo the last action.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget:
+            current_tab_widget.redo()
+
     def _on_welcome(self):
         """
         Show the welcome tab.
@@ -274,6 +306,9 @@ class MainWindow(QMainWindow):
             self._table_filtered_shape_widget.setVisible(False)
             self._copy_action.setEnabled(False)
             self._close_file_action.setEnabled(False)
+            self._undo_action.setEnabled(False)
+            self._redo_action.setEnabled(False)
+
             return
 
         self._copy_action.setEnabled(True)
@@ -281,6 +316,11 @@ class MainWindow(QMainWindow):
 
         current_tab_widget = self._tab_widget.widget(index)
 
+        # Update undo/redo actions
+        self._undo_action.setEnabled(current_tab_widget.undoable)
+        self._redo_action.setEnabled(current_tab_widget.redoable)
+
+        # Update base table shape status
         if current_tab_widget.loaded:
             self._table_full_shape_label.setText(
                 f"{current_tab_widget.get_table_shape()[1]}x{current_tab_widget.get_table_shape()[0]}")
@@ -288,6 +328,7 @@ class MainWindow(QMainWindow):
         else:
             self._table_full_shape_widget.setVisible(False)
 
+        # Update filtered table shape status
         if current_tab_widget.loaded and current_tab_widget.is_filtered():
             self._table_filtered_shape_label.setText(f"{current_tab_widget.get_filtered_table_shape()[1]}x" +
                                                      f"{current_tab_widget.get_filtered_table_shape()[0]}")
@@ -393,6 +434,29 @@ class MainWindow(QMainWindow):
             self._table_full_shape_widget.setVisible(False)
             self._table_filtered_shape_widget.setVisible(False)
 
+    def _on_table_undoable(self, undoable: bool, qvd_file_widget: QvdFileWidget):
+        """
+        Called when the table is undoable.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget == qvd_file_widget:
+            self._undo_action.setEnabled(undoable)
+
+    def _on_table_redoable(self, redoable: bool, qvd_file_widget: QvdFileWidget):
+        """
+        Called when the table is redoable.
+        """
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget == qvd_file_widget:
+            self._redo_action.setEnabled(redoable)
+
+    def _on_table_unsaved_changes(self, unsaved_changes: bool, qvd_file_widget: QvdFileWidget):
+        """
+        Called when the table has unsaved changes.
+        """
+
     def _on_recent_files_changed(self, recent_files: list):
         """
         Called when the recent files list is changed.
@@ -444,10 +508,14 @@ class MainWindow(QMainWindow):
         file_name = os.path.basename(file_path)
 
         qvd_file_widget = QvdFileWidget(file_path)
-        qvd_file_widget.tableLoaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
-        qvd_file_widget.tableFiltered.connect(lambda: self._on_table_filtered(qvd_file_widget))
-        qvd_file_widget.tableErrored.connect(lambda: self._on_table_errored(qvd_file_widget))
-        qvd_file_widget.tableLoading.connect(lambda: self._on_table_loading(qvd_file_widget))
+        qvd_file_widget.table_loaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
+        qvd_file_widget.table_filtered.connect(lambda: self._on_table_filtered(qvd_file_widget))
+        qvd_file_widget.table_errored.connect(lambda: self._on_table_errored(qvd_file_widget))
+        qvd_file_widget.table_loading.connect(lambda: self._on_table_loading(qvd_file_widget))
+        qvd_file_widget.table_undoable.connect(lambda undoable: self._on_table_undoable(undoable, qvd_file_widget))
+        qvd_file_widget.table_redoable.connect(lambda redoable: self._on_table_redoable(redoable, qvd_file_widget))
+        qvd_file_widget.table_unsaved_changes.connect(
+            lambda unsaved_changes: self._on_table_unsaved_changes(unsaved_changes, qvd_file_widget))
         tab_index = self._tab_widget.addTab(qvd_file_widget, file_name)
         self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
         self._tab_widget.tabBar().setTabData(tab_index, file_path)

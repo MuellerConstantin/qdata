@@ -158,7 +158,10 @@ class QvdFileDataView(QWidget):
     """
     Widget that represents a QVD file data view.
     """
-    tableFiltered = Signal()
+    table_filtered = Signal()
+    table_undoable = Signal(bool)
+    table_redoable = Signal(bool)
+    table_unsaved_changes = Signal(bool)
 
     def __init__(self, parent: QWidget = None):
         super().__init__(parent)
@@ -179,6 +182,9 @@ class QvdFileDataView(QWidget):
         self._table_view.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._table_view.horizontalHeader().customContextMenuRequested.connect(self._on_header_context_menu)
         self._table_view.customContextMenuRequested.connect(self._on_data_context_menu)
+        self._table_view.table_unsaved_changes.connect(self.table_unsaved_changes)
+        self._table_view.table_undoable.connect(self.table_undoable)
+        self._table_view.table_redoable.connect(self.table_redoable)
         self._central_layout.addWidget(self._table_view, 1)
 
     @property
@@ -195,6 +201,34 @@ class QvdFileDataView(QWidget):
         self._table_model.end_transform.connect(self._on_table_model_end_transform)
         self._table_model.end_filtering.connect(self._on_table_model_end_filtering)
         self._refresh()
+
+    @property
+    def loading(self) -> bool:
+        """
+        Check if the table is loading.
+        """
+        return self._table_view.loading
+
+    @property
+    def undoable(self) -> bool:
+        """
+        Check if the table is undoable.
+        """
+        return self._table_view.undoable
+
+    @property
+    def redoable(self) -> bool:
+        """
+        Check if the table is redoable.
+        """
+        return self._table_view.redoable
+
+    @property
+    def unsaved_changes(self) -> bool:
+        """
+        Check if the table has unsaved changes.
+        """
+        return self._table_view.unsaved_changes
 
     def get_selected_value(self) -> str:
         """
@@ -232,6 +266,18 @@ class QvdFileDataView(QWidget):
             return None
 
         return self._table_model.transformed_df.shape
+
+    def undo(self):
+        """
+        Undo the last action.
+        """
+        self._table_view.undo()
+
+    def redo(self):
+        """
+        Redo the last action.
+        """
+        self._table_view.redo()
 
     def _refresh(self):
         self._table_view.setModel(self._table_model)
@@ -273,7 +319,7 @@ class QvdFileDataView(QWidget):
         """
         Handle the table model ending to filter.
         """
-        self.tableFiltered.emit()
+        self.table_filtered.emit()
 
     def _on_data_context_menu_copy(self, pos: QPoint):
         """
@@ -453,10 +499,13 @@ class QvdFileWidget(QStackedWidget):
     """
     QVD file widget, for displaying QVD files.
     """
-    tableLoading = Signal()
-    tableLoaded = Signal()
-    tableErrored = Signal()
-    tableFiltered = Signal()
+    table_loading = Signal()
+    table_loaded = Signal()
+    table_errored = Signal()
+    table_filtered = Signal()
+    table_undoable = Signal(bool)
+    table_redoable = Signal(bool)
+    table_unsaved_changes = Signal(bool)
 
     def __init__(self, path: str, parent: QWidget = None):
         super().__init__(parent)
@@ -471,7 +520,10 @@ class QvdFileWidget(QStackedWidget):
         self._file_watcher.fileChanged.connect(self._on_file_changed)
 
         self._data_view = QvdFileDataView()
-        self._data_view.tableFiltered.connect(self.tableFiltered)
+        self._data_view.table_filtered.connect(self.table_filtered)
+        self._data_view.table_undoable.connect(self.table_undoable)
+        self._data_view.table_redoable.connect(self.table_redoable)
+        self._data_view.table_unsaved_changes.connect(self.table_unsaved_changes)
         self.addWidget(self._data_view)
 
         self._error_view = QvdFileErrorView()
@@ -524,6 +576,27 @@ class QvdFileWidget(QStackedWidget):
         """
         return self._data
 
+    @property
+    def undoable(self) -> bool:
+        """
+        Check if the table is undoable.
+        """
+        return self._data_view.undoable
+
+    @property
+    def redoable(self) -> bool:
+        """
+        Check if the table is redoable.
+        """
+        return self._data_view.redoable
+
+    @property
+    def unsaved_changes(self) -> bool:
+        """
+        Check if the table has unsaved changes.
+        """
+        return self._data_view.unsaved_changes
+
     def is_filtered(self) -> bool:
         """
         Check if the data is filtered.
@@ -548,6 +621,18 @@ class QvdFileWidget(QStackedWidget):
         """
         return self._data_view.get_filtered_data_shape()
 
+    def undo(self):
+        """
+        Undo the last action.
+        """
+        self._data_view.undo()
+
+    def redo(self):
+        """
+        Redo the last action.
+        """
+        self._data_view.redo()
+
     def _refresh(self):
         """
         Refresh the widget.
@@ -555,17 +640,17 @@ class QvdFileWidget(QStackedWidget):
         if self._loading:
             self.setCurrentWidget(self._loading_view)
 
-            self.tableLoading.emit()
+            self.table_loading.emit()
         elif self._error is not None:
             self._error_view.error = self._error
             self.setCurrentWidget(self._error_view)
 
-            self.tableErrored.emit()
+            self.table_errored.emit()
         else:
             self._data_view.data = self._data
             self.setCurrentWidget(self._data_view)
 
-            self.tableLoaded.emit()
+            self.table_loaded.emit()
 
     def _on_task_data(self, data: pd.DataFrame):
         """
