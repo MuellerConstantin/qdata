@@ -106,6 +106,20 @@ class MainWindow(QMainWindow):
 
         self._file_menu.addSeparator()
 
+        self._save_file_action = self._file_menu.addAction(self.tr("&Save"))
+        self._save_file_action.setShortcut("Ctrl+S")
+        self._save_file_action.setToolTip(self.tr("Save the current file"))
+        self._save_file_action.setEnabled(False)
+        self._save_file_action.triggered.connect(self._on_save)
+
+        self._save_as_file_action = self._file_menu.addAction(self.tr("Save &As..."))
+        self._save_as_file_action.setShortcut("Ctrl+Shift+S")
+        self._save_as_file_action.setToolTip(self.tr("Save the current file as..."))
+        self._save_as_file_action.setEnabled(False)
+        self._save_as_file_action.triggered.connect(self._on_save_as)
+
+        self._file_menu.addSeparator()
+
         self._close_file_action = self._file_menu.addAction(self.tr("&Close File"))
         self._close_file_action.setShortcut("Ctrl+F4")
         self._close_file_action.setToolTip(self.tr("Close the current file"))
@@ -234,6 +248,35 @@ class MainWindow(QMainWindow):
             file_path = file_dialog.selectedFiles()[0]
             self._on_open_qvd_file(file_path)
 
+    def _on_save(self):
+        """
+        Save the current file.
+        """
+        current_tab_index = self._tab_widget.currentIndex()
+
+        if current_tab_index == -1:
+            return
+
+        current_tab_widget = self._tab_widget.widget(current_tab_index)
+        current_tab_widget.save()
+
+    def _on_save_as(self):
+        """
+        Save the current file as a new file.
+        """
+        file_dialog = QFileDialog(self)
+        file_dialog.setNameFilter(self.tr("QVD Files (*.qvd)"))
+        file_dialog.setDirectory(QDir.homePath())
+        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+
+        file_dialog_result = file_dialog.exec()
+
+        if file_dialog_result:
+            file_path = file_dialog.selectedFiles()[0]
+            current_tab_index = self._tab_widget.currentIndex()
+            current_tab_widget = self._tab_widget.widget(current_tab_index)
+            current_tab_widget.save(file_path)
+
     def _on_close_file(self):
         """
         Close the current file.
@@ -311,6 +354,8 @@ class MainWindow(QMainWindow):
             self._close_file_action.setEnabled(False)
             self._undo_action.setEnabled(False)
             self._redo_action.setEnabled(False)
+            self._save_file_action.setEnabled(False)
+            self._save_as_file_action.setEnabled(False)
 
             return
 
@@ -321,6 +366,8 @@ class MainWindow(QMainWindow):
         self._close_file_action.setEnabled(True)
         self._undo_action.setEnabled(current_tab_widget.undoable)
         self._redo_action.setEnabled(current_tab_widget.redoable)
+        self._save_file_action.setEnabled(current_tab_widget.unsaved_changes)
+        self._save_as_file_action.setEnabled(current_tab_widget.loaded)
 
         # Update base table shape status
         if current_tab_widget.loaded:
@@ -342,9 +389,9 @@ class MainWindow(QMainWindow):
         """
         Close the tab at the given index.
         """
-        tab_widget = self._tab_widget.widget(index)
+        current_tab_widget = self._tab_widget.widget(index)
 
-        if tab_widget == self._welcome_widget or not tab_widget.unsaved_changes:
+        if current_tab_widget == self._welcome_widget or not current_tab_widget.unsaved_changes:
             self._tab_widget.removeTab(index)
             return
 
@@ -362,7 +409,7 @@ class MainWindow(QMainWindow):
         if decision == QMessageBox.StandardButton.Discard:
             self._tab_widget.removeTab(index)
         elif decision == QMessageBox.StandardButton.Save:
-            self._tab_widget.removeTab(index)
+            current_tab_widget.save()
 
     def _get_tab_index_by_file_path(self, file_path: str) -> int:
         """
@@ -412,6 +459,7 @@ class MainWindow(QMainWindow):
             self._table_full_shape_widget.setVisible(True)
 
             self._copy_action.setEnabled(True)
+            self._save_as_file_action.setEnabled(True)
 
     def _on_table_filtered(self, qvd_file_widget: QvdFileWidget):
         """
@@ -490,6 +538,36 @@ class MainWindow(QMainWindow):
 
         close_button.style().polish(close_button)
 
+        current_tab_widget = self._tab_widget.currentWidget()
+
+        if current_tab_widget == qvd_file_widget:
+            self._save_file_action.setEnabled(unsaved_changes)
+            self._save_as_file_action.setEnabled(True)
+
+    def _on_table_path_changed(self, path: str, qvd_file_widget: QvdFileWidget):
+        """
+        Called when the table path is changed.
+        """
+        tab_index = self._tab_widget.indexOf(qvd_file_widget)
+        file_name = os.path.basename(path)
+
+        self._tab_widget.tabBar().setTabToolTip(tab_index, path)
+        self._tab_widget.setTabText(tab_index, file_name)
+
+        # Update recent files list
+        settings = QSettings(QSettings.Scope.UserScope)
+        recent_files = list(QSettings(QSettings.Scope.UserScope).value("recentFiles", [], list))
+
+        try:
+            recent_files.remove(path)
+        except ValueError:
+            pass
+
+        recent_files.insert(0, str(path))
+        settings.setValue('recentFiles', recent_files)
+
+        self._on_recent_files_changed(recent_files)
+
     def _on_recent_files_changed(self, recent_files: list):
         """
         Called when the recent files list is changed.
@@ -549,6 +627,7 @@ class MainWindow(QMainWindow):
         qvd_file_widget.table_redoable.connect(lambda redoable: self._on_table_redoable(redoable, qvd_file_widget))
         qvd_file_widget.table_unsaved_changes.connect(
             lambda unsaved_changes: self._on_table_unsaved_changes(unsaved_changes, qvd_file_widget))
+        qvd_file_widget.table_path_changed.connect(lambda path: self._on_table_path_changed(path, qvd_file_widget))
         tab_index = self._tab_widget.addTab(qvd_file_widget, file_name)
         self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
         self._tab_widget.tabBar().setTabData(tab_index, file_path)

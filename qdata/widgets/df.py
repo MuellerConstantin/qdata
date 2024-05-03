@@ -155,5 +155,11 @@ class DataFrameTableView(QTableView):
         """
         self._undo_stack.redo()
 
+    def mark_saved(self) -> None:
+        """
+        Mark the current state as saved.
+        """
+        self._undo_stack.setClean()
+
     def _on_data_edit(self, row: int, col: int, old_value: object, new_value: object) -> None:
         self._undo_stack.push(DataFrameEditCommand(self.model(), row, col, old_value, new_value))
