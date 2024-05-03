@@ -108,7 +108,13 @@ class DataFrameTableView(QTableView):
         Set the loading state.
         """
         self._loading = value
-        self._refresh()
+
+        if self._loading:
+            self._loading_overlay.show()
+            self._loading_overlay.setEnabled(True)
+        else:
+            self._loading_overlay.hide()
+            self._loading_overlay.setEnabled(False)
 
     @property
     def undoable(self) -> bool:
@@ -148,14 +154,6 @@ class DataFrameTableView(QTableView):
         Redo the last action.
         """
         self._undo_stack.redo()
-
-    def _refresh(self) -> None:
-        if self._loading:
-            self._loading_overlay.show()
-            self._loading_overlay.setEnabled(True)
-        else:
-            self._loading_overlay.hide()
-            self._loading_overlay.setEnabled(False)
 
     def _on_data_edit(self, row: int, col: int, old_value: object, new_value: object) -> None:
         self._undo_stack.push(DataFrameEditCommand(self.model(), row, col, old_value, new_value))

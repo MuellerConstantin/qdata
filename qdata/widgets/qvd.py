@@ -192,7 +192,7 @@ class QvdFileDataView(QWidget):
         """
         Get the data in the table.
         """
-        return self._table_model.df if self._table_model is not None else None
+        return self._table_model.base_df if self._table_model is not None else None
 
     @data.setter
     def data(self, value: pd.DataFrame):
@@ -200,7 +200,8 @@ class QvdFileDataView(QWidget):
         self._table_model.begin_transform.connect(self._on_table_model_begin_transform)
         self._table_model.end_transform.connect(self._on_table_model_end_transform)
         self._table_model.end_filtering.connect(self._on_table_model_end_filtering)
-        self._refresh()
+
+        self._table_view.setModel(self._table_model)
 
     @property
     def loading(self) -> bool:
@@ -208,6 +209,10 @@ class QvdFileDataView(QWidget):
         Check if the table is loading.
         """
         return self._table_view.loading
+
+    @loading.setter
+    def loading(self, value: bool):
+        self._table_view.loading = value
 
     @property
     def undoable(self) -> bool:
@@ -278,9 +283,6 @@ class QvdFileDataView(QWidget):
         Redo the last action.
         """
         self._table_view.redo()
-
-    def _refresh(self):
-        self._table_view.setModel(self._table_model)
 
     def _add_filter(self, filter_: DataFrameFilter):
         """
@@ -429,8 +431,6 @@ class QvdFileErrorView(QWidget):
         super().__init__(parent)
 
         self._error: Exception = None
-        self._error_title: str = None
-        self._error_message: str = None
 
         self._central_layout = QVBoxLayout()
         self._central_layout.setContentsMargins(10, 10, 10, 10)
@@ -466,17 +466,14 @@ class QvdFileErrorView(QWidget):
         self._error = value
 
         if isinstance(value, FileNotFoundError):
-            self._error_title = "File Not Found"
-            self._error_message = "The specified file has been moved or doesn't longer exist."
+            error_title = "File Not Found"
+            error_message = "The specified file has been moved or doesn't longer exist."
         else:
-            self._error_title = "Unexpected Error"
-            self._error_message = "Reading the file failed; the file may be corrupted."
+            error_title = "Unexpected Error"
+            error_message = "Reading the file failed; the file may be corrupted."
 
-        self._refresh()
-
-    def _refresh(self):
-        self._title_label.setText(self._error_title)
-        self._message_label.setText(self._error_message)
+        self._title_label.setText(error_title)
+        self._message_label.setText(error_message)
 
 class QvdFileLoadingView(QWidget):
     """
@@ -501,7 +498,7 @@ class QvdFileWidget(QStackedWidget):
     """
     table_loading = Signal()
     table_loaded = Signal()
-    table_errored = Signal()
+    table_loading_errored = Signal()
     table_filtered = Signal()
     table_undoable = Signal(bool)
     table_redoable = Signal(bool)
@@ -512,8 +509,7 @@ class QvdFileWidget(QStackedWidget):
 
         self._path = path
         self._loading: bool = False
-        self._error: Exception = None
-        self._data: pd.DataFrame = None
+        self._loading_errored: bool = False
 
         self._file_watcher = QFileSystemWatcher()
         self._file_watcher.addPath(self._path)
@@ -553,28 +549,14 @@ class QvdFileWidget(QStackedWidget):
         """
         Check if the file has finished loading.
         """
-        return not self._loading and self._error is None
+        return not self._loading and not self._loading_errored
 
     @property
-    def errored(self) -> bool:
+    def loading_errored(self) -> bool:
         """
         Check if an error occurred while loading the file.
         """
-        return not self._loading and self._error is not None
-
-    @property
-    def error(self) -> Exception:
-        """
-        Get the error that occurred while loading the file.
-        """
-        return self._error
-
-    @property
-    def data(self) -> pd.DataFrame:
-        """
-        Get the data from the QVD file.
-        """
-        return self._data
+        return not self._loading and self._loading_errored
 
     @property
     def undoable(self) -> bool:
@@ -633,43 +615,31 @@ class QvdFileWidget(QStackedWidget):
         """
         self._data_view.redo()
 
-    def _refresh(self):
-        """
-        Refresh the widget.
-        """
-        if self._loading:
-            self.setCurrentWidget(self._loading_view)
-
-            self.table_loading.emit()
-        elif self._error is not None:
-            self._error_view.error = self._error
-            self.setCurrentWidget(self._error_view)
-
-            self.table_errored.emit()
-        else:
-            self._data_view.data = self._data
-            self.setCurrentWidget(self._data_view)
-
-            self.table_loaded.emit()
-
-    def _on_task_data(self, data: pd.DataFrame):
+    def _on_load_task_data(self, data: pd.DataFrame):
         """
         Handle the task data.
         """
-        self._data = data
+        self._data_view.data = data
+        self.table_loaded.emit()
 
-    def _on_task_error(self, error: Tuple[Exception, type, str]):
+        self.setCurrentWidget(self._data_view)
+
+    def _on_load_task_error(self, error: Tuple[Exception, type, str]):
         """
         Handle the task error.
         """
-        self._error = error[0]
+        self._error_view.error = error[0]
+        self._loading_errored = True
+        self.table_loading_errored.emit()
 
-    def _on_task_finished(self):
+        self.setCurrentWidget(self._error_view)
+
+    def _on_load_task_finished(self):
         """
         Handle the task finishing.
         """
         self._loading = False
-        self._refresh()
+        self._data_view.loading = False
 
     def _on_file_changed(self):
         """
@@ -702,8 +672,8 @@ class QvdFileWidget(QStackedWidget):
         self.setCurrentWidget(self._loading_view)
 
         task = LoadQvdFileTask(self._path)
-        task.signals.data.connect(self._on_task_data)
-        task.signals.error.connect(self._on_task_error)
-        task.signals.finished.connect(self._on_task_finished)
+        task.signals.data.connect(self._on_load_task_data)
+        task.signals.error.connect(self._on_load_task_error)
+        task.signals.finished.connect(self._on_load_task_finished)
 
         QThreadPool.globalInstance().start(task)

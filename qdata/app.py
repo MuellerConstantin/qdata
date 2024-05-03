@@ -104,6 +104,8 @@ class MainWindow(QMainWindow):
         self._on_recent_files_changed(recent_files)
         self._recent_files_menu.setEnabled(bool(recent_files))
 
+        self._file_menu.addSeparator()
+
         self._close_file_action = self._file_menu.addAction(self.tr("&Close File"))
         self._close_file_action.setShortcut("Ctrl+F4")
         self._close_file_action.setToolTip(self.tr("Close the current file"))
@@ -312,12 +314,11 @@ class MainWindow(QMainWindow):
 
             return
 
-        self._copy_action.setEnabled(True)
-        self._close_file_action.setEnabled(True)
-
         current_tab_widget = self._tab_widget.widget(index)
 
-        # Update undo/redo actions
+        # Update actions depending on widget state
+        self._copy_action.setEnabled(current_tab_widget.loaded)
+        self._close_file_action.setEnabled(True)
         self._undo_action.setEnabled(current_tab_widget.undoable)
         self._redo_action.setEnabled(current_tab_widget.redoable)
 
@@ -409,6 +410,8 @@ class MainWindow(QMainWindow):
             self._table_full_shape_label.setText(
                 f"{qvd_file_widget.get_table_shape()[1]}x{qvd_file_widget.get_table_shape()[0]}")
             self._table_full_shape_widget.setVisible(True)
+
+            self._copy_action.setEnabled(True)
 
     def _on_table_filtered(self, qvd_file_widget: QvdFileWidget):
         """
@@ -540,7 +543,7 @@ class MainWindow(QMainWindow):
         qvd_file_widget = QvdFileWidget(file_path)
         qvd_file_widget.table_loaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
         qvd_file_widget.table_filtered.connect(lambda: self._on_table_filtered(qvd_file_widget))
-        qvd_file_widget.table_errored.connect(lambda: self._on_table_errored(qvd_file_widget))
+        qvd_file_widget.table_loading_errored.connect(lambda: self._on_table_errored(qvd_file_widget))
         qvd_file_widget.table_loading.connect(lambda: self._on_table_loading(qvd_file_widget))
         qvd_file_widget.table_undoable.connect(lambda undoable: self._on_table_undoable(undoable, qvd_file_widget))
         qvd_file_widget.table_redoable.connect(lambda redoable: self._on_table_redoable(redoable, qvd_file_widget))
