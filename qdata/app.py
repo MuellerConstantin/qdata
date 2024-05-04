@@ -636,7 +636,8 @@ class MainWindow(QMainWindow):
         close_button = QPushButton(self)
         close_button.setProperty("role", "close")
         close_button.setToolTip(self.tr("Close Tab"))
-        close_button.clicked.connect(lambda: self._tab_widget.tabBar().tabCloseRequested.emit(tab_index))
+        close_button.clicked.connect(lambda: self._tab_widget.tabBar()
+                                     .tabCloseRequested.emit(self._tab_widget.indexOf(qvd_file_widget)))
         self._tab_widget.tabBar().setTabButton(tab_index, QTabBar.ButtonPosition.RightSide, close_button)
 
         self._tab_widget.setCurrentIndex(tab_index)
