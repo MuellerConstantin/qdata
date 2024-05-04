@@ -1,5 +1,6 @@
 pytest
 pylint
+invoke
 nuitka
 PySide6
 PyQvd
