@@ -14,7 +14,7 @@ from qdata.widgets.filter import FilterTagView, FilterTag
 from qdata.widgets.df import DataFrameTableView
 from qdata.core.models.df import DataFrameTableModel
 from qdata.core.models.transform import DataFrameFilter, DataFrameFilterOperation
-from qdata.parallel.qvd import LoadQvdFileTask, PersistQvdFileTask
+from qdata.parallel.qvd import LoadQvdFileTask, PersistQvdFileTask, ExportCsvFileTask
 
 class QvdFileFieldValuesDialog(QDialog):
     """
@@ -512,19 +512,24 @@ class QvdFileWidget(QStackedWidget):
     table_persisting = Signal()
     table_persisted = Signal()
     table_persisting_errored = Signal()
+    table_exporting = Signal()
+    table_exported = Signal()
+    table_exporting_errored = Signal()
     table_path_changed = Signal(str)
 
-    def __init__(self, path: str, parent: QWidget = None):
+    def __init__(self, parent: QWidget = None):
         super().__init__(parent)
 
-        self._path = path
+        self._path: str = None
+        self._loaded: bool = False
         self._loading: bool = False
         self._loading_errored: bool = False
         self._persisting: bool = False
         self._persisting_errored: bool = False
+        self._exporting: bool = False
+        self._exporting_errored: bool = False
 
         self._file_watcher = QFileSystemWatcher()
-        self._file_watcher.addPath(self._path)
         self._file_watcher.fileChanged.connect(self._on_file_changed)
 
         self._data_view = QvdFileDataView()
@@ -540,33 +545,33 @@ class QvdFileWidget(QStackedWidget):
         self._loading_view = QvdFileLoadingView()
         self.addWidget(self._loading_view)
 
-        self._load_qvd_file()
+        #self._load_qvd_file()
 
     @property
     def path(self) -> str:
         """
-        Get the path of the QVD file.
+        Get the path of the QVD file if it is persisted. May be None if the file is not persisted yet.
         """
         return self._path
 
     @property
+    def loaded(self) -> bool:
+        """
+        Indicates if the file is loaded and ready to be displayed.
+        """
+        return not self._loading and self._loaded
+
+    @property
     def loading(self) -> bool:
         """
-        Check if the file is still loading.
+        Indicates if the file is loading.
         """
         return self._loading
 
     @property
-    def loaded(self) -> bool:
-        """
-        Check if the file has finished loading.
-        """
-        return not self._loading and not self._loading_errored
-
-    @property
     def loading_errored(self) -> bool:
         """
-        Check if an error occurred while loading the file.
+        Check if an error occurred while loading the file last time.
         """
         return not self._loading and self._loading_errored
 
@@ -578,18 +583,25 @@ class QvdFileWidget(QStackedWidget):
         return self._persisting
 
     @property
-    def persisted(self) -> bool:
-        """
-        Check if the file has finished persisting.
-        """
-        return not self._persisting and not self._persisting_errored
-
-    @property
     def persisting_errored(self) -> bool:
         """
-        Check if an error occurred while persisting the file.
+        Check if an error occurred while persisting the file last time.
         """
         return not self._persisting and self._persisting_errored
+
+    @property
+    def exporting(self) -> bool:
+        """
+        Check if the file is exporting.
+        """
+        return self._exporting
+
+    @property
+    def exporting_errored(self) -> bool:
+        """
+        Check if an error occurred while exporting the file last time.
+        """
+        return not self._exporting and self._exporting_errored
 
     @property
     def undoable(self) -> bool:
@@ -608,7 +620,7 @@ class QvdFileWidget(QStackedWidget):
     @property
     def unsaved_changes(self) -> bool:
         """
-        Check if the table has unsaved changes.
+        Check if the table has unsaved changes that are not persisted yet.
         """
         return self._data_view.unsaved_changes
 
@@ -648,6 +660,21 @@ class QvdFileWidget(QStackedWidget):
         """
         self._data_view.redo()
 
+    def load(self, path: str):
+        """
+        Load a QVD file.
+        """
+        self._path = path
+        self._loading = True
+        self.setCurrentWidget(self._loading_view)
+
+        task = LoadQvdFileTask(self._path)
+        task.signals.data.connect(self._on_load_task_data)
+        task.signals.error.connect(self._on_load_task_error)
+        task.signals.finished.connect(self._on_load_task_finished)
+
+        QThreadPool.globalInstance().start(task)
+
     def save(self, path: str = None):
         """
         Save the table to a QVD file.
@@ -661,15 +688,36 @@ class QvdFileWidget(QStackedWidget):
 
             self.table_path_changed.emit(self._path)
 
-        self._persist_qvd_file()
+        self._persisting = True
+        self._data_view.loading = True
 
-        self._file_watcher.blockSignals(True)
+        task = PersistQvdFileTask(self._data_view.data, self._path)
+        task.signals.succeeded.connect(self._on_persist_task_succeeded)
+        task.signals.error.connect(self._on_persist_task_error)
+        task.signals.finished.connect(self._on_persist_task_finished)
+
+        QThreadPool.globalInstance().start(task)
+
+    def export_to_csv(self, path: str):
+        """
+        Export the table to a CSV file.
+        """
+        self._exporting = True
+        self._data_view.loading = True
+
+        task = ExportCsvFileTask(self._data_view.data, path)
+        task.signals.succeeded.connect(self._on_export_task_succeeded)
+        task.signals.error.connect(self._on_export_task_error)
+        task.signals.finished.connect(self._on_export_task_finished)
+
+        QThreadPool.globalInstance().start(task)
 
     def _on_load_task_data(self, data: pd.DataFrame):
         """
         Handle the task data.
         """
         self._data_view.data = data
+        self._loaded = True
         self.table_loaded.emit()
 
         self.setCurrentWidget(self._data_view)
@@ -697,6 +745,7 @@ class QvdFileWidget(QStackedWidget):
         """
         self._data_view.mark_saved()
         self.table_persisted.emit()
+        self._file_watcher.blockSignals(False)
 
     def _on_persist_task_error(self, error: Tuple[Exception, type, str]):
         """
@@ -718,6 +767,34 @@ class QvdFileWidget(QStackedWidget):
         Handle the persist task finishing.
         """
         self._persisting = False
+        self._data_view.loading = False
+
+    def _on_export_task_succeeded(self):
+        """
+        Handle the export task succeeded.
+        """
+        self.table_exported.emit()
+
+    def _on_export_task_error(self, error: Tuple[Exception, type, str]):
+        """
+        Handle the export task error.
+        """
+        self._exporting_errored = True
+        self.table_exporting_errored.emit()
+
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.Critical)
+        message_box.setWindowTitle(self.tr("Error"))
+        message_box.setText(self.tr("An error occurred while exporting the file:") + "\n" + self._path + "\n\n" +
+                            str(error[0]))
+        message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        message_box.exec()
+
+    def _on_export_task_finished(self):
+        """
+        Handle the export task finishing.
+        """
+        self._exporting = False
         self._data_view.loading = False
 
     def _on_file_changed(self):
@@ -742,31 +819,3 @@ class QvdFileWidget(QStackedWidget):
 
         if decision == QMessageBox.StandardButton.Yes:
             self._load_qvd_file()
-
-    def _load_qvd_file(self):
-        """
-        Load the QVD file.
-        """
-        self._loading = True
-        self.setCurrentWidget(self._loading_view)
-
-        task = LoadQvdFileTask(self._path)
-        task.signals.data.connect(self._on_load_task_data)
-        task.signals.error.connect(self._on_load_task_error)
-        task.signals.finished.connect(self._on_load_task_finished)
-
-        QThreadPool.globalInstance().start(task)
-
-    def _persist_qvd_file(self):
-        """
-        Persist the QVD file.
-        """
-        self._persisting = True
-        self._data_view.loading = True
-
-        task = PersistQvdFileTask(self._data_view.data, self._path)
-        task.signals.succeeded.connect(self._on_persist_task_succeeded)
-        task.signals.error.connect(self._on_persist_task_error)
-        task.signals.finished.connect(self._on_persist_task_finished)
-
-        QThreadPool.globalInstance().start(task)

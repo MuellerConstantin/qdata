@@ -120,6 +120,16 @@ class MainWindow(QMainWindow):
 
         self._file_menu.addSeparator()
 
+        self._export_menu = self._file_menu.addMenu(self.tr("&Export"))
+        self._export_menu.setToolTip(self.tr("Export the current table"))
+        self._export_menu.setEnabled(False)
+
+        self._export_to_csv_action = self._export_menu.addAction(self.tr("&CSV..."))
+        self._export_to_csv_action.setToolTip(self.tr("Export the current table as a CSV file"))
+        self._export_to_csv_action.triggered.connect(self._on_export_to_csv)
+
+        self._file_menu.addSeparator()
+
         self._close_file_action = self._file_menu.addAction(self.tr("&Close File"))
         self._close_file_action.setShortcut("Ctrl+F4")
         self._close_file_action.setToolTip(self.tr("Close the current file"))
@@ -277,6 +287,23 @@ class MainWindow(QMainWindow):
             current_tab_widget = self._tab_widget.widget(current_tab_index)
             current_tab_widget.save(file_path)
 
+    def _on_export_to_csv(self):
+        """
+        Export the current table as a CSV file.
+        """
+        file_dialog = QFileDialog(self)
+        file_dialog.setNameFilter(self.tr("CSV Files (*.csv)"))
+        file_dialog.setDirectory(QDir.homePath())
+        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+
+        file_dialog_result = file_dialog.exec()
+
+        if file_dialog_result:
+            file_path = file_dialog.selectedFiles()[0]
+            current_tab_index = self._tab_widget.currentIndex()
+            current_tab_widget = self._tab_widget.widget(current_tab_index)
+            current_tab_widget.export_to_csv(file_path)
+
     def _on_close_file(self):
         """
         Close the current file.
@@ -356,6 +383,7 @@ class MainWindow(QMainWindow):
             self._redo_action.setEnabled(False)
             self._save_file_action.setEnabled(False)
             self._save_as_file_action.setEnabled(False)
+            self._export_menu.setEnabled(False)
 
             return
 
@@ -368,6 +396,7 @@ class MainWindow(QMainWindow):
         self._redo_action.setEnabled(current_tab_widget.redoable)
         self._save_file_action.setEnabled(current_tab_widget.unsaved_changes)
         self._save_as_file_action.setEnabled(current_tab_widget.loaded)
+        self._export_menu.setEnabled(current_tab_widget.loaded)
 
         # Update base table shape status
         if current_tab_widget.loaded:
@@ -460,6 +489,7 @@ class MainWindow(QMainWindow):
 
             self._copy_action.setEnabled(True)
             self._save_as_file_action.setEnabled(True)
+            self._export_menu.setEnabled(True)
 
     def _on_table_filtered(self, qvd_file_widget: QvdFileWidget):
         """
@@ -618,7 +648,7 @@ class MainWindow(QMainWindow):
 
         file_name = os.path.basename(file_path)
 
-        qvd_file_widget = QvdFileWidget(file_path)
+        qvd_file_widget = QvdFileWidget()
         qvd_file_widget.table_loaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
         qvd_file_widget.table_filtered.connect(lambda: self._on_table_filtered(qvd_file_widget))
         qvd_file_widget.table_loading_errored.connect(lambda: self._on_table_errored(qvd_file_widget))
@@ -628,6 +658,8 @@ class MainWindow(QMainWindow):
         qvd_file_widget.table_unsaved_changes.connect(
             lambda unsaved_changes: self._on_table_unsaved_changes(unsaved_changes, qvd_file_widget))
         qvd_file_widget.table_path_changed.connect(lambda path: self._on_table_path_changed(path, qvd_file_widget))
+        qvd_file_widget.load(file_path)
+
         tab_index = self._tab_widget.addTab(qvd_file_widget, file_name)
         self._tab_widget.tabBar().setTabToolTip(tab_index, file_path)
         self._tab_widget.tabBar().setTabData(tab_index, file_path)
