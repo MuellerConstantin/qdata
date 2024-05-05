@@ -15,6 +15,7 @@ class WelcomeWidget(QWidget):
     """
     open_file = Signal()
     open_recent = Signal(str)
+    import_csv_file = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -139,6 +140,15 @@ class WelcomeWidget(QWidget):
         self._open_file_button.setMaximumWidth(400)
         self._open_file_button.clicked.connect(self.open_file.emit)
         self._actions_layout.addWidget(self._open_file_button)
+
+        self._import_csv_file_button = QCommandLinkButton(self.tr("Import CSV File"))
+        self._import_csv_file_button.setDescription("Import a CSV file to start working with QData.")
+        self._import_csv_file_button.setIcon(QIcon(":/icons/file-import-green-600.svg"))
+        self._import_csv_file_button_size_policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._import_csv_file_button.setSizePolicy(self._import_csv_file_button_size_policy)
+        self._import_csv_file_button.setMaximumWidth(400)
+        self._import_csv_file_button.clicked.connect(self.import_csv_file.emit)
+        self._actions_layout.addWidget(self._import_csv_file_button)
 
     def update_recent_files(self):
         """

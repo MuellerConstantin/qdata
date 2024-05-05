@@ -14,7 +14,7 @@ from qdata.widgets.filter import FilterTagView, FilterTag
 from qdata.widgets.df import DataFrameTableView
 from qdata.core.models.df import DataFrameTableModel
 from qdata.core.models.transform import DataFrameFilter, DataFrameFilterOperation
-from qdata.parallel.qvd import LoadQvdFileTask, PersistQvdFileTask, ExportCsvFileTask
+from qdata.parallel.qvd import LoadQvdFileTask, PersistQvdFileTask, ImportCsvFileTask, ExportCsvFileTask
 
 class QvdFileFieldValuesDialog(QDialog):
     """
@@ -512,6 +512,9 @@ class QvdFileWidget(QStackedWidget):
     table_persisting = Signal()
     table_persisted = Signal()
     table_persisting_errored = Signal()
+    table_importing = Signal()
+    table_imported = Signal()
+    table_importing_errored = Signal()
     table_exporting = Signal()
     table_exported = Signal()
     table_exporting_errored = Signal()
@@ -526,6 +529,8 @@ class QvdFileWidget(QStackedWidget):
         self._loading_errored: bool = False
         self._persisting: bool = False
         self._persisting_errored: bool = False
+        self._importing: bool = False
+        self._importing_errored: bool = False
         self._exporting: bool = False
         self._exporting_errored: bool = False
 
@@ -590,6 +595,20 @@ class QvdFileWidget(QStackedWidget):
         return not self._persisting and self._persisting_errored
 
     @property
+    def importing(self) -> bool:
+        """
+        Check if the file is importing.
+        """
+        return self._importing
+
+    @property
+    def importing_errored(self) -> bool:
+        """
+        Check if an error occurred while importing the file last time.
+        """
+        return not self._importing and self._importing_errored
+
+    @property
     def exporting(self) -> bool:
         """
         Check if the file is exporting.
@@ -622,7 +641,7 @@ class QvdFileWidget(QStackedWidget):
         """
         Check if the table has unsaved changes that are not persisted yet.
         """
-        return self._data_view.unsaved_changes
+        return self._data_view.unsaved_changes or self._path is None
 
     def is_filtered(self) -> bool:
         """
@@ -682,7 +701,9 @@ class QvdFileWidget(QStackedWidget):
         self._file_watcher.blockSignals(True)
 
         if path is not None:
-            self._file_watcher.removePath(self._path)
+            if self._path is not None:
+                self._file_watcher.removePath(self._path)
+
             self._path = path
             self._file_watcher.addPath(self._path)
 
@@ -695,6 +716,20 @@ class QvdFileWidget(QStackedWidget):
         task.signals.succeeded.connect(self._on_persist_task_succeeded)
         task.signals.error.connect(self._on_persist_task_error)
         task.signals.finished.connect(self._on_persist_task_finished)
+
+        QThreadPool.globalInstance().start(task)
+
+    def import_from_csv(self, path: str):
+        """
+        Import a CSV file.
+        """
+        self._importing = True
+        self._data_view.loading = True
+
+        task = ImportCsvFileTask(path)
+        task.signals.data.connect(self._on_import_task_data)
+        task.signals.error.connect(self._on_import_task_error)
+        task.signals.finished.connect(self._on_import_task_finished)
 
         QThreadPool.globalInstance().start(task)
 
@@ -747,6 +782,9 @@ class QvdFileWidget(QStackedWidget):
         self.table_persisted.emit()
         self._file_watcher.blockSignals(False)
 
+        # Triggered manually in case the file was saved for the first time
+        self.table_unsaved_changes.emit(False)
+
     def _on_persist_task_error(self, error: Tuple[Exception, type, str]):
         """
         Handle the persist task error.
@@ -757,7 +795,7 @@ class QvdFileWidget(QStackedWidget):
         message_box = QMessageBox(self)
         message_box.setIcon(QMessageBox.Icon.Critical)
         message_box.setWindowTitle(self.tr("Error"))
-        message_box.setText(self.tr("An error occurred while saving the file:") + "\n" + self._path + "\n\n" +
+        message_box.setText(self.tr("An error occurred while saving the file:") + "\n" + str(self._path) + "\n\n" +
                             str(error[0]))
         message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         message_box.exec()
@@ -767,6 +805,35 @@ class QvdFileWidget(QStackedWidget):
         Handle the persist task finishing.
         """
         self._persisting = False
+        self._data_view.loading = False
+
+    def _on_import_task_data(self, data: pd.DataFrame):
+        """
+        Handle the task data.
+        """
+        self._data_view.data = data
+        self._loaded = True
+        self.table_loaded.emit()
+
+        self.setCurrentWidget(self._data_view)
+
+        self.table_unsaved_changes.emit(True)
+
+    def _on_import_task_error(self, error: Tuple[Exception, type, str]):
+        """
+        Handle the task error.
+        """
+        self._error_view.error = error[0]
+        self._importing_errored = True
+        self.table_importing_errored.emit()
+
+        self.setCurrentWidget(self._error_view)
+
+    def _on_import_task_finished(self):
+        """
+        Handle the task finishing.
+        """
+        self._importing = False
         self._data_view.loading = False
 
     def _on_export_task_succeeded(self):
@@ -785,7 +852,7 @@ class QvdFileWidget(QStackedWidget):
         message_box = QMessageBox(self)
         message_box.setIcon(QMessageBox.Icon.Critical)
         message_box.setWindowTitle(self.tr("Error"))
-        message_box.setText(self.tr("An error occurred while exporting the file:") + "\n" + self._path + "\n\n" +
+        message_box.setText(self.tr("An error occurred while exporting the file:") + "\n" + str(self._path) + "\n\n" +
                             str(error[0]))
         message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         message_box.exec()
@@ -818,4 +885,4 @@ class QvdFileWidget(QStackedWidget):
         self._file_watcher.blockSignals(False)
 
         if decision == QMessageBox.StandardButton.Yes:
-            self._load_qvd_file()
+            self.load(self._path)

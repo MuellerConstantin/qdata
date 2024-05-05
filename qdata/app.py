@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         self._welcome_widget = WelcomeWidget()
         self._welcome_widget.open_file.connect(self._on_open_file)
         self._welcome_widget.open_recent.connect(self._on_open_recent_file)
+        self._welcome_widget.import_csv_file.connect(self._on_import_from_csv)
 
         tab_index = self._tab_widget.addTab(self._welcome_widget, "Welcome")
         self._tab_widget.tabBar().setTabToolTip(tab_index, "Welcome to QData")
@@ -119,6 +120,13 @@ class MainWindow(QMainWindow):
         self._save_as_file_action.triggered.connect(self._on_save_as)
 
         self._file_menu.addSeparator()
+
+        self._import_menu = self._file_menu.addMenu(self.tr("&Import"))
+        self._import_menu.setToolTip(self.tr("Import a file"))
+
+        self._import_from_csv_action = self._import_menu.addAction(self.tr("&CSV..."))
+        self._import_from_csv_action.setToolTip(self.tr("Import a CSV file"))
+        self._import_from_csv_action.triggered.connect(self._on_import_from_csv)
 
         self._export_menu = self._file_menu.addMenu(self.tr("&Export"))
         self._export_menu.setToolTip(self.tr("Export the current table"))
@@ -287,6 +295,21 @@ class MainWindow(QMainWindow):
             current_tab_widget = self._tab_widget.widget(current_tab_index)
             current_tab_widget.save(file_path)
 
+    def _on_import_from_csv(self):
+        """
+        Import a CSV file.
+        """
+        file_dialog = QFileDialog(self)
+        file_dialog.setNameFilter(self.tr("CSV Files (*.csv)"))
+        file_dialog.setDirectory(QDir.homePath())
+        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+
+        file_dialog_result = file_dialog.exec()
+
+        if file_dialog_result:
+            file_path = file_dialog.selectedFiles()[0]
+            self._on_open_csv_file(file_path)
+
     def _on_export_to_csv(self):
         """
         Export the current table as a CSV file.
@@ -394,7 +417,7 @@ class MainWindow(QMainWindow):
         self._close_file_action.setEnabled(True)
         self._undo_action.setEnabled(current_tab_widget.undoable)
         self._redo_action.setEnabled(current_tab_widget.redoable)
-        self._save_file_action.setEnabled(current_tab_widget.unsaved_changes)
+        self._save_file_action.setEnabled(current_tab_widget.unsaved_changes and current_tab_widget.path is not None)
         self._save_as_file_action.setEnabled(current_tab_widget.loaded)
         self._export_menu.setEnabled(current_tab_widget.loaded)
 
@@ -438,7 +461,19 @@ class MainWindow(QMainWindow):
         if decision == QMessageBox.StandardButton.Discard:
             self._tab_widget.removeTab(index)
         elif decision == QMessageBox.StandardButton.Save:
-            current_tab_widget.save()
+            if current_tab_widget.path is not None:
+                current_tab_widget.save()
+            else:
+                file_dialog = QFileDialog(self)
+                file_dialog.setNameFilter(self.tr("QVD Files (*.qvd)"))
+                file_dialog.setDirectory(QDir.homePath())
+                file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+
+                file_dialog_result = file_dialog.exec()
+
+                if file_dialog_result:
+                    file_path = file_dialog.selectedFiles()[0]
+                    current_tab_widget.save(file_path)
 
     def _get_tab_index_by_file_path(self, file_path: str) -> int:
         """
@@ -571,7 +606,7 @@ class MainWindow(QMainWindow):
         current_tab_widget = self._tab_widget.currentWidget()
 
         if current_tab_widget == qvd_file_widget:
-            self._save_file_action.setEnabled(unsaved_changes)
+            self._save_file_action.setEnabled(unsaved_changes and qvd_file_widget.path is not None)
             self._save_as_file_action.setEnabled(True)
 
     def _on_table_path_changed(self, path: str, qvd_file_widget: QvdFileWidget):
@@ -581,6 +616,7 @@ class MainWindow(QMainWindow):
         tab_index = self._tab_widget.indexOf(qvd_file_widget)
         file_name = os.path.basename(path)
 
+        self._tab_widget.tabBar().setTabData(tab_index, path)
         self._tab_widget.tabBar().setTabToolTip(tab_index, path)
         self._tab_widget.setTabText(tab_index, file_name)
 
@@ -687,6 +723,38 @@ class MainWindow(QMainWindow):
         settings.setValue('recentFiles', recent_files)
 
         self._on_recent_files_changed(recent_files)
+
+    def _on_open_csv_file(self, file_path: str):
+        """
+        Open a CSV file and import it.
+        """
+        file_name = os.path.basename(file_path).split('.')[0]
+        file_name = f"{file_name}.qvd"
+
+        qvd_file_widget = QvdFileWidget()
+        qvd_file_widget.table_loaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
+        qvd_file_widget.table_filtered.connect(lambda: self._on_table_filtered(qvd_file_widget))
+        qvd_file_widget.table_loading_errored.connect(lambda: self._on_table_errored(qvd_file_widget))
+        qvd_file_widget.table_loading.connect(lambda: self._on_table_loading(qvd_file_widget))
+        qvd_file_widget.table_undoable.connect(lambda undoable: self._on_table_undoable(undoable, qvd_file_widget))
+        qvd_file_widget.table_redoable.connect(lambda redoable: self._on_table_redoable(redoable, qvd_file_widget))
+        qvd_file_widget.table_unsaved_changes.connect(
+            lambda unsaved_changes: self._on_table_unsaved_changes(unsaved_changes, qvd_file_widget))
+        qvd_file_widget.table_path_changed.connect(lambda path: self._on_table_path_changed(path, qvd_file_widget))
+        qvd_file_widget.import_from_csv(file_path)
+
+        tab_index = self._tab_widget.addTab(qvd_file_widget, file_name)
+        self._tab_widget.tabBar().setTabToolTip(tab_index, file_name)
+        self._tab_widget.tabBar().setTabIcon(tab_index, QIcon(":/icons/qvd-file.svg"))
+
+        close_button = QPushButton(self)
+        close_button.setProperty("role", "close")
+        close_button.setToolTip(self.tr("Close Tab"))
+        close_button.clicked.connect(lambda: self._tab_widget.tabBar()
+                                     .tabCloseRequested.emit(self._tab_widget.indexOf(qvd_file_widget)))
+        self._tab_widget.tabBar().setTabButton(tab_index, QTabBar.ButtonPosition.RightSide, close_button)
+
+        self._tab_widget.setCurrentIndex(tab_index)
 
 class Application(QApplication):
     """

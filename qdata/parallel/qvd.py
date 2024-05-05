@@ -40,6 +40,38 @@ class LoadQvdFileTask(QRunnable):
         finally:
             self.signals.finished.emit()
 
+class ImportCsvFileTaskSignals(QObject):
+    """
+    Signals for the ImportCsvFileTask class.
+    """
+    finished = Signal()
+    error = Signal(Exception)
+    data = Signal(pd.DataFrame)
+
+class ImportCsvFileTask(QRunnable):
+    """
+    Task for loading a QVD file.
+    """
+    def __init__(self, path: str):
+        super().__init__()
+
+        self.signals = ImportCsvFileTaskSignals()
+        self._path = path
+
+    def run(self) -> None:
+        try:
+            df = pd.read_csv(self._path, keep_default_na=False, na_values=[''])
+            df = df.where(df.notnull(), None)
+
+            self.signals.data.emit(df)
+        # pylint: disable-next=bare-except
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((value, exctype, traceback.format_exc()))
+        finally:
+            self.signals.finished.emit()
+
 class PersistQvdFileTaskSignals(QObject):
     """
     Signals for the PersistQvdFileTask class.

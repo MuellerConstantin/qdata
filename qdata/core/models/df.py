@@ -89,7 +89,7 @@ class DataFrameTableModel(QAbstractTableModel):
             elif role == Qt.ItemDataRole.UserRole:
                 return value
             elif role == Qt.ItemDataRole.FontRole:
-                if value is None:
+                if value is None or pd.isna(value):
                     font = QFont()
                     font.setItalic(True)
 
@@ -227,7 +227,7 @@ class DataFrameTableModel(QAbstractTableModel):
         """
         Format a data value for display.
         """
-        if value is None:
+        if value is None or pd.isna(value):
             return "N/A"
 
         if is_datetime(type(value)):
