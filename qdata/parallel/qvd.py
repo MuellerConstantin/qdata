@@ -5,7 +5,7 @@ Module for loading QVD files in parallel.
 import sys
 import traceback
 from PySide6.QtCore import QRunnable, Signal, QObject
-from pyqvd import QvdDataFrame
+from pyqvd import QvdTable
 import pandas as pd
 
 class LoadQvdFileTaskSignals(QObject):
@@ -28,7 +28,7 @@ class LoadQvdFileTask(QRunnable):
 
     def run(self) -> None:
         try:
-            df = QvdDataFrame.from_qvd(self._path)
+            df = QvdTable.from_qvd(self._path)
             df = df.to_pandas()
 
             self.signals.data.emit(df)
@@ -93,7 +93,7 @@ class PersistQvdFileTask(QRunnable):
 
     def run(self) -> None:
         try:
-            qvd = QvdDataFrame.from_pandas(self._df)
+            qvd = QvdTable.from_pandas(self._df)
             qvd.to_qvd(self._path)
 
             self.signals.succeeded.emit()
