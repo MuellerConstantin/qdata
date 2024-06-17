@@ -17,6 +17,8 @@
  * red-500: #ef4444
  */
 
+/* ==================== Standard Widgets ==================== */
+
 /* -------- QWidget -------- */
 
 QWidget {
@@ -457,4 +459,79 @@ QToolTip {
     border: 1px solid #e4e4e7;
     color: #262626;
     background-color: #ffffff;
+}
+
+/* ==================== Custom Widgets ==================== */
+
+/* -------- WelcomeWidget -------- */
+
+WelcomeWidget QWidget.welcome-sidebar {
+    background-color: #16a34a; color: #ffffff;
+}
+
+WelcomeWidget QWidget.welcome-sidebar QLabel.recent-files-label {
+    font-size: 16px;
+    font-weight: semi-bold;
+    color: #ffffff;
+}
+
+WelcomeWidget QWidget.welcome-sidebar QLabel.no-recent-files-label {
+    font-style: italic;
+    color: #ffffff;
+}
+
+WelcomeWidget QWidget.welcome-sidebar QScrollArea.recent-files-scroll-area {
+    background-color: transparent;
+    border: none;
+}
+
+WelcomeWidget QWidget.welcome-sidebar QWidget.recent-files-container {
+    background-color: transparent;
+    border: none;
+}
+
+WelcomeWidget QWidget.welcome-sidebar QPushButton.recent-file-button {
+    color: #ffffff;
+    text-align: left;
+    font-size: 14px;
+}
+
+WelcomeWidget QWidget.welcome-content {
+    background-color: #ffffff;
+}
+
+WelcomeWidget QWidget.welcome-content QLabel.welcome-label {
+    font-size: 18px;
+    font-weight: semi-bold;
+}
+
+WelcomeWidget QWidget.welcome-content QLabel.start-label {
+    font-size: 16px;
+    font-weight: semi-bold;
+}
+
+/* -------- FilterTag -------- */
+
+FilterTag {
+    background-color: #ffffff;
+}
+
+FilterTag QPushButton.close-button {
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    qproperty-icon: url(:/icons/xmark-neutral-800.svg);
+}
+
+/* -------- QvdFileFieldValuesDialog -------- */
+
+QvdFileFieldValuesDialog QLabel.column-name-label {
+    font-size: 16px;
+    font-weight: semi-bold;
+}
+
+/* -------- QvdFileErrorView -------- */
+
+QvdFileErrorView QLabel.title-label {
+    font-size: 18px;
 }

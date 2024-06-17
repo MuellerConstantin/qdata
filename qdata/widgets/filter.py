@@ -24,7 +24,6 @@ class FilterTag(QFrame):
         self.setFixedHeight(30)
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         self.setFrameStyle(QFrame.Shape.Panel | QFrame.Shadow.Raised)
-        self.setStyleSheet("background-color: #ffffff;")
         self.setToolTip(f"{self._get_operator_text(self._filter.operation)} '{self._filter.value}'")
 
         self._central_layout = QHBoxLayout()
@@ -41,9 +40,8 @@ class FilterTag(QFrame):
         self._central_layout.addWidget(self._title_label, 1)
 
         self._close_button = QPushButton()
+        self._close_button.setProperty("class", "close-button")
         self._close_button.setIconSize(QSize(16, 16))
-        self._close_button.setStyleSheet("QPushButton {padding: 0; border: 0; " +
-                                         "qproperty-icon: url(:/icons/xmark-neutral-800.svg);}")
         self._close_button.setToolTip("Remove Filter")
         self._close_button.clicked.connect(self.close.emit)
         self._central_layout.addWidget(self._close_button)

@@ -55,6 +55,5 @@ class AboutDialog(QDialog):
                                                        QSizePolicy.Policy.MinimumExpanding))
 
         self._dialog_button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
-        self._dialog_button_box.button(QDialogButtonBox.Ok).setProperty("class", "primary")
         self._dialog_button_box.accepted.connect(self.accept)
         self._central_layout.addWidget(self._dialog_button_box)

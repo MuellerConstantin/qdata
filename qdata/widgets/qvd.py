@@ -41,8 +41,8 @@ class QvdFileFieldValuesDialog(QDialog):
         self.setLayout(self._central_layout)
 
         self._column_name_label = QLabel(self._column)
+        self._column_name_label.setProperty("class", "column-name-label")
         self._column_name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._column_name_label.setStyleSheet("font-size: 16px; font-weight: semi-bold;")
         self._central_layout.addWidget(self._column_name_label)
 
         self._search_line_edit = QLineEdit()
@@ -450,8 +450,8 @@ class QvdFileErrorView(QWidget):
         self._central_layout.addWidget(self._error_icon_label)
 
         self._title_label = QLabel()
+        self._title_label.setProperty("class", "title-label")
         self._title_label.setAlignment(Qt.AlignCenter)
-        self._title_label.setStyleSheet("font-size: 18px;")
         self._central_layout.addWidget(self._title_label)
 
         self._message_label = QLabel()
