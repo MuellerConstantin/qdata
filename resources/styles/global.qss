@@ -587,3 +587,8 @@ DataFrameCellEditDialog QLabel.error-label {
     color: #ef4444;
     font-size: 12px;
 }
+
+DataFrameCellEditDialog QLabel.title-label {
+    font-size: 16px;
+    font-weight: semi-bold;
+}

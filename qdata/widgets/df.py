@@ -2,6 +2,7 @@
 Module contains the data frame widgets.
 """
 
+import datetime as dt
 from PySide6.QtWidgets import (QTableView, QWidget, QFrame, QDialog, QVBoxLayout, QButtonGroup, QRadioButton,
                                QLineEdit, QGridLayout, QDialogButtonBox, QSpacerItem, QSizePolicy, QGroupBox,
                                QComboBox, QLabel)
@@ -71,7 +72,7 @@ class DataFrameCellEditDialog(QDialog):
         self._value = None
 
         self.setWindowTitle(self.tr("Edit Value"))
-        self.setFixedSize(400, 320)
+        self.setFixedSize(400, 350)
         self.setWindowIcon(QIcon(":/favicons/favicon-dark.ico"))
 
         self._central_layout = QVBoxLayout()
@@ -79,33 +80,9 @@ class DataFrameCellEditDialog(QDialog):
         self._central_layout.setSpacing(10)
         self.setLayout(self._central_layout)
 
-        self._data_type_button_group = QButtonGroup(self)
-        self._data_type_button_group.buttonClicked.connect(self._on_data_type_radio_button_clicked)
-        self._data_type_layout = QGridLayout()
-        self._data_type_group_box = QGroupBox(self.tr("Data Type"))
-        self._data_type_group_box.setLayout(self._data_type_layout)
-        self._central_layout.addWidget(self._data_type_group_box)
-
-        self._text_button = QRadioButton(self.tr("Text"))
-        self._text_button.setChecked(True)
-        self._data_type_button_group.addButton(self._text_button)
-        self._data_type_layout.addWidget(self._text_button, 0, 0)
-
-        self._integer_button = QRadioButton(self.tr("Integer"))
-        self._data_type_button_group.addButton(self._integer_button)
-        self._data_type_layout.addWidget(self._integer_button, 1, 0)
-
-        self._real_button = QRadioButton(self.tr("Real"))
-        self._data_type_button_group.addButton(self._real_button)
-        self._data_type_layout.addWidget(self._real_button, 2, 0)
-
-        self._format_group_box = QGroupBox(self.tr("Format"))
-        self._format_layout = QVBoxLayout()
-        self._format_group_box.setLayout(self._format_layout)
-        self._central_layout.addWidget(self._format_group_box)
-
-        self._format_combo_box = QComboBox()
-        self._format_layout.addWidget(self._format_combo_box)
+        self._title_label = QLabel(self.tr("Value"))
+        self._title_label.setProperty("class", "title-label")
+        self._central_layout.addWidget(self._title_label)
 
         self._value_edit_layout = QVBoxLayout()
         self._value_edit_layout.setContentsMargins(0, 0, 0, 0)
@@ -123,6 +100,50 @@ class DataFrameCellEditDialog(QDialog):
         self._error_label.setProperty("class", "error-label")
         self._error_label.setVisible(False)
         self._value_edit_layout.addWidget(self._error_label)
+
+        self._data_type_button_group = QButtonGroup(self)
+        self._data_type_button_group.buttonClicked.connect(self._on_data_type_radio_button_clicked)
+        self._data_type_layout = QGridLayout()
+        self._data_type_group_box = QGroupBox(self.tr("Data Type"))
+        self._data_type_group_box.setLayout(self._data_type_layout)
+        self._central_layout.addWidget(self._data_type_group_box)
+
+        self._text_button = QRadioButton(self.tr("Text"))
+        self._text_button.setChecked(True)
+        self._data_type_button_group.addButton(self._text_button)
+        self._data_type_layout.addWidget(self._text_button, 0, 0)
+
+        self._integer_button = QRadioButton(self.tr("Integer"))
+        self._data_type_button_group.addButton(self._integer_button)
+        self._data_type_layout.addWidget(self._integer_button, 0, 1)
+
+        self._real_button = QRadioButton(self.tr("Real"))
+        self._data_type_button_group.addButton(self._real_button)
+        self._data_type_layout.addWidget(self._real_button, 0, 2)
+
+        self._time_button = QRadioButton(self.tr("Time"))
+        self._data_type_button_group.addButton(self._time_button)
+        self._data_type_layout.addWidget(self._time_button, 1, 0)
+
+        self._date_button = QRadioButton(self.tr("Date"))
+        self._data_type_button_group.addButton(self._date_button)
+        self._data_type_layout.addWidget(self._date_button, 1, 1)
+
+        self._datetime_button = QRadioButton(self.tr("Timestamp"))
+        self._data_type_button_group.addButton(self._datetime_button)
+        self._data_type_layout.addWidget(self._datetime_button, 1, 2)
+
+        self._duration_button = QRadioButton(self.tr("Duration"))
+        self._data_type_button_group.addButton(self._duration_button)
+        self._data_type_layout.addWidget(self._duration_button, 2, 0)
+
+        self._format_group_box = QGroupBox(self.tr("Format"))
+        self._format_layout = QVBoxLayout()
+        self._format_group_box.setLayout(self._format_layout)
+        self._central_layout.addWidget(self._format_group_box)
+
+        self._format_combo_box = QComboBox()
+        self._format_layout.addWidget(self._format_combo_box)
 
         self._central_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum,
                                                        QSizePolicy.Policy.MinimumExpanding))
@@ -149,42 +170,82 @@ class DataFrameCellEditDialog(QDialog):
         if self._text_button.isChecked():
             self._value = value
         elif self._integer_button.isChecked():
-            if self._format_combo_box.currentIndex() == 0:
-                try:
+            try:
+                if self._format_combo_box.currentIndex() == 0:
                     self._value = int(value)
-                except ValueError:
-                    self._error_label.setText(self.tr("Invalid integer value."))
-                    self._error_label.setVisible(True)
-                    return
-            elif self._format_combo_box.currentIndex() == 1:
-                try:
+                elif self._format_combo_box.currentIndex() == 1:
                     self._value = int(value.replace(",", ""))
-                except ValueError:
-                    self._error_label.setText(self.tr("Invalid integer value."))
-                    self._error_label.setVisible(True)
-                    return
-            elif self._format_combo_box.currentIndex() == 2:
-                try:
+                elif self._format_combo_box.currentIndex() == 2:
                     self._value = int(value.replace(".", ""))
-                except ValueError:
-                    self._error_label.setText(self.tr("Invalid integer value."))
-                    self._error_label.setVisible(True)
-                    return
+            except ValueError:
+                self._error_label.setText(self.tr("Invalid integer value."))
+                self._error_label.setVisible(True)
+                return
         elif self._real_button.isChecked():
-            if self._format_combo_box.currentIndex() == 0:
-                try:
+            try:
+                if self._format_combo_box.currentIndex() == 0:
                     self._value = float(value.replace(",", ""))
-                except ValueError:
-                    self._error_label.setText(self.tr("Invalid real value."))
-                    self._error_label.setVisible(True)
-                    return
-            elif self._format_combo_box.currentIndex() == 1:
-                try:
+                elif self._format_combo_box.currentIndex() == 1:
                     self._value = float(value.replace(".", "").replace(",", "."))
-                except ValueError:
-                    self._error_label.setText(self.tr("Invalid real value."))
-                    self._error_label.setVisible(True)
-                    return
+            except ValueError:
+                self._error_label.setText(self.tr("Invalid real value."))
+                self._error_label.setVisible(True)
+                return
+        elif self._time_button.isChecked():
+            try:
+                if self._format_combo_box.currentIndex() == 0:
+                    self._value = dt.datetime.strptime(value, "%H:%M:%S").time()
+                elif self._format_combo_box.currentIndex() == 1:
+                    self._value = dt.datetime.strptime(value, "%H:%M").time()
+                elif self._format_combo_box.currentIndex() == 2:
+                    self._value = dt.datetime.strptime(value, "%I:%M:%S %p").time()
+                elif self._format_combo_box.currentIndex() == 3:
+                    self._value = dt.datetime.strptime(value, "%I:%M %p").time()
+            except ValueError:
+                self._error_label.setText(self.tr("Invalid time value."))
+                self._error_label.setVisible(True)
+                return
+        elif self._date_button.isChecked():
+            try:
+                if self._format_combo_box.currentIndex() == 0:
+                    self._value = dt.datetime.strptime(value, "%Y-%m-%d").date()
+                elif self._format_combo_box.currentIndex() == 1:
+                    self._value = dt.datetime.strptime(value, "%d.%m.%Y").date()
+            except ValueError:
+                self._error_label.setText(self.tr("Invalid date value."))
+                self._error_label.setVisible(True)
+                return
+        elif self._datetime_button.isChecked():
+            try:
+                if self._format_combo_box.currentIndex() == 0:
+                    self._value = dt.datetime.strptime(value, "%Y-%m-%d %I:%M:%S %p")
+                elif self._format_combo_box.currentIndex() == 1:
+                    self._value = dt.datetime.strptime(value, "%Y-%m-%d %I:%M %p")
+                elif self._format_combo_box.currentIndex() == 2:
+                    self._value = dt.datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
+                elif self._format_combo_box.currentIndex() == 3:
+                    self._value = dt.datetime.strptime(value, "%d.%m.%Y %H:%M")
+            except ValueError:
+                self._error_label.setText(self.tr("Invalid timestamp value."))
+                self._error_label.setVisible(True)
+                return
+        elif self._duration_button.isChecked():
+            try:
+                if self._format_combo_box.currentIndex() == 0:
+                    days = value.split(" ")[0]
+                    time = value.split(" ")[1]
+                    hours = time.split(":")[0]
+                    minutes = time.split(":")[1]
+                    seconds = time.split(":")[2]
+
+                    self._value = dt.timedelta(days=int(days),
+                                               hours=int(hours),
+                                               minutes=int(minutes),
+                                               seconds=int(seconds))
+            except (ValueError, IndexError, TypeError):
+                self._error_label.setText(self.tr("Invalid duration value."))
+                self._error_label.setVisible(True)
+                return
 
         self.accept()
 
@@ -202,6 +263,29 @@ class DataFrameCellEditDialog(QDialog):
             self._format_combo_box.clear()
             self._format_combo_box.addItems(["Decimal Dot (#,###.##)",
                                              "Decimal Comma (#.###,##)"])
+            self._format_combo_box.setEnabled(True)
+        elif button == self._time_button:
+            self._format_combo_box.clear()
+            self._format_combo_box.addItems(["HH:MM:SS",
+                                             "HH:MM",
+                                             "HH:MM:SS AM/PM",
+                                             "HH:MM AM/PM"])
+            self._format_combo_box.setEnabled(True)
+        elif button == self._date_button:
+            self._format_combo_box.clear()
+            self._format_combo_box.addItems(["YYYY-MM-DD",
+                                             "DD.MM.YYYY"])
+            self._format_combo_box.setEnabled(True)
+        elif button == self._datetime_button:
+            self._format_combo_box.clear()
+            self._format_combo_box.addItems(["YYYY-MM-DD HH:MM:SS AM/PM",
+                                             "YYYY-MM-DD HH:MM AM/PM",
+                                             "DD.MM.YYYY HH:MM:SS",
+                                             "DD.MM.YYYY HH:MM"])
+            self._format_combo_box.setEnabled(True)
+        elif button == self._duration_button:
+            self._format_combo_box.clear()
+            self._format_combo_box.addItems(["D HH:MM:SS"])
             self._format_combo_box.setEnabled(True)
 
 class DataFrameTableView(QTableView):

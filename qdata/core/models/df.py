@@ -3,9 +3,10 @@ Contains the models for handling tabular data.
 """
 
 from typing import List, Tuple
+import datetime as dt
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal, QThreadPool
 from PySide6.QtGui import QFont
-from pandas.api.types import is_datetime64_any_dtype as is_datetime
+from pandas.api.types import is_integer_dtype, is_float_dtype, is_datetime64_any_dtype
 import pandas as pd
 import numpy as np
 from qdata.core.models.transform import DataFrameFilter
@@ -16,10 +17,16 @@ class DataFrameTableModelOptions:
     Options for the DataFrameTableModel.
     """
     def __init__(self, float_format: str = "{:.4f}", int_format: str = "{:d}",
+                 date_format: str = "%Y-%m-%d",
+                 time_format: str = "%H:%M:%S",
+                 timedelta_format: str = "%H:%M:%S",
                  datetime_format: str = "%Y-%m-%d %H:%M:%S"):
         self._float_format = float_format
         self._int_format = int_format
         self._datetime_format = datetime_format
+        self._date_format = date_format
+        self._time_format = time_format
+        self._timedelta_format = timedelta_format
 
     @property
     def float_format(self) -> str:
@@ -34,6 +41,20 @@ class DataFrameTableModelOptions:
         Get the int format string.
         """
         return self._int_format
+
+    @property
+    def date_format(self) -> str:
+        """
+        Get the date format string.
+        """
+        return self._date_format
+
+    @property
+    def time_format(self) -> str:
+        """
+        Get the time format string.
+        """
+        return self._time_format
 
     @property
     def datetime_format(self) -> str:
@@ -89,7 +110,7 @@ class DataFrameTableModel(QAbstractTableModel):
             elif role == Qt.ItemDataRole.UserRole:
                 return value
             elif role == Qt.ItemDataRole.FontRole:
-                if value is None or pd.isna(value):
+                if value is None or pd.isna(value) or (is_float_dtype(type(value)) and np.isnan(value)):
                     font = QFont()
                     font.setItalic(True)
 
@@ -221,16 +242,37 @@ class DataFrameTableModel(QAbstractTableModel):
         if value is None or pd.isna(value):
             return "N/A"
 
-        if is_datetime(type(value)):
-            return value.strftime(self._options.datetime_format)
+        value_type = type(value)
 
-        if isinstance(value, str):
-            if type(value) in [float, np.float64] and np.isnan(value):
-                return ""
-            if type(value) in [float, np.float64]:
-                return self._options.float_format.format(value)
-            if type(value) in [int, np.int64]:
-                return self._options.int_format.format(value)
+        if is_integer_dtype(value_type):
+            return self._options.int_format.format(value)
+        if is_float_dtype(value_type):
+            if np.isnan(value):
+                return "NaN"
+
+            return self._options.float_format.format(value)
+        if isinstance(value, pd.Timestamp):
+            return value.to_pydatetime().strftime(self._options.datetime_format)
+        if is_datetime64_any_dtype(value_type):
+            return value.to_pydatetime().strftime(self._options.datetime_format)
+        if isinstance(value, pd.Timedelta):
+            days = value.to_pytimedelta().days
+            hours, seconds = divmod(value.to_pytimedelta().seconds, 60 * 60)
+            minutes, seconds = divmod(seconds, 60)
+
+            return f"{days} {hours:02}:{minutes:02}:{seconds:02}"
+        if isinstance(value, dt.datetime):
+            return value.strftime(self._options.datetime_format)
+        if isinstance(value, dt.date):
+            return value.strftime(self._options.date_format)
+        if isinstance(value, dt.time):
+            return value.strftime(self._options.time_format)
+        if isinstance(value, dt.timedelta):
+            days = value.days
+            hours, seconds = divmod(value.seconds, 60 * 60)
+            minutes, seconds = divmod(seconds, 60)
+
+            return f"{days} {hours:02}:{minutes:02}:{seconds:02}"
 
         return str(value)
 
