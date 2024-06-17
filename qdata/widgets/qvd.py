@@ -46,6 +46,7 @@ class QvdFileFieldValuesDialog(QDialog):
         self._central_layout.addWidget(self._column_name_label)
 
         self._search_line_edit = QLineEdit()
+        self._search_line_edit.setMinimumHeight(30)
         self._search_line_edit.addAction(QIcon(":/icons/magnifying-glass-green-600.svg"),
                                          QLineEdit.ActionPosition.LeadingPosition)
         self._search_line_edit.setPlaceholderText(self.tr("Search..."))

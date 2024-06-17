@@ -418,6 +418,37 @@ QTableView QLineEdit {
     border-top-right-radius: unset;
 }
 
+/* -------- QComboBox -------- */
+
+QComboBox {
+    color: #262626;
+    background-color: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 2px;
+    padding: 4px;
+    selection-color: #ffffff;
+    selection-background-color: #16a34a;
+}
+
+QComboBox:disabled {
+    color: #a3a3a3;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QComboBox::down-arrow {
+    image: url(:/icons/chevron-down-neutral-800.svg);
+    width: 12px;
+    height: 12px;
+}
+
+QComboBox::down-arrow:disabled {
+    image: url(:/icons/chevron-down-neutral-400.svg);
+}
+
 /* -------- QPushButton -------- */
 
 QPushButton {
@@ -534,4 +565,25 @@ QvdFileFieldValuesDialog QLabel.column-name-label {
 
 QvdFileErrorView QLabel.title-label {
     font-size: 18px;
+}
+
+/* -------- DataFrameCellEditDialog -------- */
+
+DataFrameCellEditDialog QLineEdit.value-edit {
+    color: #262626;
+    background-color: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 2px;
+    padding: 4px;
+    selection-color: #ffffff;
+    selection-background-color: #16a34a;
+}
+
+DataFrameCellEditDialog QLineEdit.value-edit:focus {
+    border: 1px solid #16a34a;
+}
+
+DataFrameCellEditDialog QLabel.error-label {
+    color: #ef4444;
+    font-size: 12px;
 }

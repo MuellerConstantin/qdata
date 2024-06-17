@@ -2,8 +2,10 @@
 Module contains the data frame widgets.
 """
 
-from PySide6.QtWidgets import QTableView, QWidget, QFrame
-from PySide6.QtGui import QResizeEvent, QPaintEvent, QPainter, QColor, QUndoStack, QUndoCommand
+from PySide6.QtWidgets import (QTableView, QWidget, QFrame, QDialog, QVBoxLayout, QButtonGroup, QRadioButton,
+                               QLineEdit, QGridLayout, QDialogButtonBox, QSpacerItem, QSizePolicy, QGroupBox,
+                               QComboBox, QLabel)
+from PySide6.QtGui import QResizeEvent, QPaintEvent, QPainter, QColor, QUndoStack, QUndoCommand, QIcon
 from PySide6.QtCore import Qt, Signal
 from qdata.widgets.progress import Spinner
 from qdata.core.models.df import DataFrameTableModel
@@ -59,6 +61,149 @@ class DataFrameEditCommand(QUndoCommand):
     def redo(self):
         self._model.setData(self._model.index(self._row, self._col), self._new_value, Qt.ItemDataRole.UserRole)
 
+class DataFrameCellEditDialog(QDialog):
+    """
+    Data frame cell edit dialog.
+    """
+    def __init__(self, current_value: str, parent: QWidget = None):
+        super().__init__(parent)
+
+        self._value = None
+
+        self.setWindowTitle(self.tr("Edit Value"))
+        self.setFixedSize(400, 320)
+        self.setWindowIcon(QIcon(":/favicons/favicon-dark.ico"))
+
+        self._central_layout = QVBoxLayout()
+        self._central_layout.setContentsMargins(10, 10, 10, 10)
+        self._central_layout.setSpacing(10)
+        self.setLayout(self._central_layout)
+
+        self._data_type_button_group = QButtonGroup(self)
+        self._data_type_button_group.buttonClicked.connect(self._on_data_type_radio_button_clicked)
+        self._data_type_layout = QGridLayout()
+        self._data_type_group_box = QGroupBox(self.tr("Data Type"))
+        self._data_type_group_box.setLayout(self._data_type_layout)
+        self._central_layout.addWidget(self._data_type_group_box)
+
+        self._text_button = QRadioButton(self.tr("Text"))
+        self._text_button.setChecked(True)
+        self._data_type_button_group.addButton(self._text_button)
+        self._data_type_layout.addWidget(self._text_button, 0, 0)
+
+        self._integer_button = QRadioButton(self.tr("Integer"))
+        self._data_type_button_group.addButton(self._integer_button)
+        self._data_type_layout.addWidget(self._integer_button, 1, 0)
+
+        self._real_button = QRadioButton(self.tr("Real"))
+        self._data_type_button_group.addButton(self._real_button)
+        self._data_type_layout.addWidget(self._real_button, 2, 0)
+
+        self._format_group_box = QGroupBox(self.tr("Format"))
+        self._format_layout = QVBoxLayout()
+        self._format_group_box.setLayout(self._format_layout)
+        self._central_layout.addWidget(self._format_group_box)
+
+        self._format_combo_box = QComboBox()
+        self._format_layout.addWidget(self._format_combo_box)
+
+        self._value_edit_layout = QVBoxLayout()
+        self._value_edit_layout.setContentsMargins(0, 0, 0, 0)
+        self._value_edit_layout.setSpacing(2)
+        self._central_layout.addLayout(self._value_edit_layout)
+
+        self._value_edit = QLineEdit()
+        self._value_edit.setProperty("class", "value-edit")
+        self._value_edit.setMinimumHeight(30)
+        self._value_edit.setText(current_value)
+        self._value_edit.setPlaceholderText(self.tr("Enter value..."))
+        self._value_edit_layout.addWidget(self._value_edit)
+
+        self._error_label = QLabel()
+        self._error_label.setProperty("class", "error-label")
+        self._error_label.setVisible(False)
+        self._value_edit_layout.addWidget(self._error_label)
+
+        self._central_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum,
+                                                       QSizePolicy.Policy.MinimumExpanding))
+
+        self._dialog_button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply |
+                                                   QDialogButtonBox.StandardButton.Cancel)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._on_apply)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.reject)
+        self._central_layout.addWidget(self._dialog_button_box)
+
+    @property
+    def value(self) -> object:
+        """
+        Get the value.
+        """
+        return self._value
+
+    def _on_apply(self) -> None:
+        """
+        Apply the changes.
+        """
+        value = self._value_edit.text()
+
+        if self._text_button.isChecked():
+            self._value = value
+        elif self._integer_button.isChecked():
+            if self._format_combo_box.currentIndex() == 0:
+                try:
+                    self._value = int(value)
+                except ValueError:
+                    self._error_label.setText(self.tr("Invalid integer value."))
+                    self._error_label.setVisible(True)
+                    return
+            elif self._format_combo_box.currentIndex() == 1:
+                try:
+                    self._value = int(value.replace(",", ""))
+                except ValueError:
+                    self._error_label.setText(self.tr("Invalid integer value."))
+                    self._error_label.setVisible(True)
+                    return
+            elif self._format_combo_box.currentIndex() == 2:
+                try:
+                    self._value = int(value.replace(".", ""))
+                except ValueError:
+                    self._error_label.setText(self.tr("Invalid integer value."))
+                    self._error_label.setVisible(True)
+                    return
+        elif self._real_button.isChecked():
+            if self._format_combo_box.currentIndex() == 0:
+                try:
+                    self._value = float(value.replace(",", ""))
+                except ValueError:
+                    self._error_label.setText(self.tr("Invalid real value."))
+                    self._error_label.setVisible(True)
+                    return
+            elif self._format_combo_box.currentIndex() == 1:
+                try:
+                    self._value = float(value.replace(".", "").replace(",", "."))
+                except ValueError:
+                    self._error_label.setText(self.tr("Invalid real value."))
+                    self._error_label.setVisible(True)
+                    return
+
+        self.accept()
+
+    def _on_data_type_radio_button_clicked(self, button: QRadioButton) -> None:
+        if button == self._text_button:
+            self._format_combo_box.clear()
+            self._format_combo_box.setEnabled(False)
+        elif button == self._integer_button:
+            self._format_combo_box.clear()
+            self._format_combo_box.addItems(["No Group Separator (####)",
+                                             "Comma Group Separator (#,###)",
+                                             "Dot Group Separator (#.###)"])
+            self._format_combo_box.setEnabled(True)
+        elif button == self._real_button:
+            self._format_combo_box.clear()
+            self._format_combo_box.addItems(["Decimal Dot (#,###.##)",
+                                             "Decimal Comma (#.###,##)"])
+            self._format_combo_box.setEnabled(True)
+
 class DataFrameTableView(QTableView):
     """
     Pandas data frame optimized table view.
@@ -88,6 +233,8 @@ class DataFrameTableView(QTableView):
         self._loading_overlay.move(0, 0)
         self._loading_overlay.resize(self.width(), self.height())
         self._loading_overlay.hide()
+
+        self.doubleClicked.connect(self._on_double_click)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -163,3 +310,11 @@ class DataFrameTableView(QTableView):
 
     def _on_data_edit(self, row: int, col: int, old_value: object, new_value: object) -> None:
         self._undo_stack.push(DataFrameEditCommand(self.model(), row, col, old_value, new_value))
+
+    def _on_double_click(self, index: object) -> None:
+        value = self.model().data(index, Qt.ItemDataRole.DisplayRole)
+
+        dialog = DataFrameCellEditDialog(value, self)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.model().setData(index, dialog.value, Qt.ItemDataRole.EditRole)

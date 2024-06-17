@@ -78,7 +78,7 @@ class DataFrameTableModel(QAbstractTableModel):
 
     # pylint: disable-next=unused-argument
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
 
     def data(self, index: QModelIndex, role: int = ...) -> object:
         if index.isValid() and self.df is not None:
@@ -115,15 +115,6 @@ class DataFrameTableModel(QAbstractTableModel):
     def setData(self, index: QModelIndex, value: object, role: int = ...) -> bool:
         if index.isValid() and self.df is not None:
             if role == Qt.ItemDataRole.EditRole or role == Qt.ItemDataRole.UserRole:
-                # try convert the value to int or float
-                try:
-                    value = int(value)
-                except ValueError:
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        pass
-
                 # Convert view index to pandas index
                 pandas_index = self.df.index[index.row()]
                 previous_value = self.df.loc[pandas_index, self.df.columns[index.column()]]
