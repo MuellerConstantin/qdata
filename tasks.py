@@ -5,14 +5,15 @@ Contains build automation tasks for the project.
 """
 
 import os
+import platform
 import shutil
 from invoke import task
 
 LINTER = "pylint"
 TEST_RUNNER = "pytest"
-COMPILER = "nuitka"
+COMPILER = "nuitka" if platform.system() == "Windows" else "nuitka3"
 RESOURCE_COMPILER = "pyside6-rcc"
-INTERPRETER = "python"
+INTERPRETER = "python" if platform.system() == "Windows" else "python3"
 
 @task(name="test")
 def test(ctx):
