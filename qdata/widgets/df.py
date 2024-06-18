@@ -298,7 +298,8 @@ class DataFrameItemDelegate(QItemDelegate):
         return DataFrameCellEditDialog(current_value, parent)
 
     def setModelData(self, editor: QWidget, model: DataFrameTableModel, index: QModelIndex) -> None:
-        model.setData(index, editor.value, Qt.ItemDataRole.EditRole)
+        if editor.result() == QDialog.DialogCode.Accepted:
+            model.setData(index, editor.value, Qt.ItemDataRole.EditRole)
 
 class DataFrameTableView(QTableView):
     """
