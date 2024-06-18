@@ -99,7 +99,7 @@ class DataFrameTableModel(QAbstractTableModel):
 
     # pylint: disable-next=unused-argument
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
     def data(self, index: QModelIndex, role: int = ...) -> object:
         if index.isValid() and self.df is not None:

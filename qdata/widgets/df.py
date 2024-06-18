@@ -5,9 +5,9 @@ Module contains the data frame widgets.
 import datetime as dt
 from PySide6.QtWidgets import (QTableView, QWidget, QFrame, QDialog, QVBoxLayout, QButtonGroup, QRadioButton,
                                QLineEdit, QGridLayout, QDialogButtonBox, QSpacerItem, QSizePolicy, QGroupBox,
-                               QComboBox, QLabel)
+                               QComboBox, QLabel, QItemDelegate, QStyleOptionViewItem)
 from PySide6.QtGui import QResizeEvent, QPaintEvent, QPainter, QColor, QUndoStack, QUndoCommand, QIcon
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QModelIndex
 from qdata.widgets.progress import Spinner
 from qdata.core.models.df import DataFrameTableModel
 
@@ -288,6 +288,18 @@ class DataFrameCellEditDialog(QDialog):
             self._format_combo_box.addItems(["D HH:MM:SS"])
             self._format_combo_box.setEnabled(True)
 
+class DataFrameItemDelegate(QItemDelegate):
+    """
+    Data frame item delegate.
+    """
+    def createEditor(self, parent: QWidget, _: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
+        current_value = index.data(Qt.ItemDataRole.DisplayRole)
+
+        return DataFrameCellEditDialog(current_value, parent)
+
+    def setModelData(self, editor: QWidget, model: DataFrameTableModel, index: QModelIndex) -> None:
+        model.setData(index, editor.value, Qt.ItemDataRole.EditRole)
+
 class DataFrameTableView(QTableView):
     """
     Pandas data frame optimized table view.
@@ -318,7 +330,7 @@ class DataFrameTableView(QTableView):
         self._loading_overlay.resize(self.width(), self.height())
         self._loading_overlay.hide()
 
-        self.doubleClicked.connect(self._on_double_click)
+        self.setItemDelegate(DataFrameItemDelegate(self))
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -394,11 +406,3 @@ class DataFrameTableView(QTableView):
 
     def _on_data_edit(self, row: int, col: int, old_value: object, new_value: object) -> None:
         self._undo_stack.push(DataFrameEditCommand(self.model(), row, col, old_value, new_value))
-
-    def _on_double_click(self, index: object) -> None:
-        value = self.model().data(index, Qt.ItemDataRole.DisplayRole)
-
-        dialog = DataFrameCellEditDialog(value, self)
-
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.model().setData(index, dialog.value, Qt.ItemDataRole.EditRole)
