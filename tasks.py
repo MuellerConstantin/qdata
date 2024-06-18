@@ -53,7 +53,7 @@ def build(ctx):
     """
     Build the project to a standalone executable.
     """
-    ctx.run(f"{COMPILER} --plugin-enable=pyside6 --windows-icon-from-ico=./resources/favicons/favicon-dark.ico --include-data-dir=./resources=resources --disable-console --standalone qdata")
+    ctx.run(f"{COMPILER} --plugin-enable=pyside6 --windows-console-mode=disable --windows-icon-from-ico=./resources/favicons/favicon-dark.ico --include-data-dir=./resources=resources --standalone qdata")
 
 @task(name="run", pre=[resources])
 def run(ctx):
