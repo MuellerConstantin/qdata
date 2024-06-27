@@ -3,6 +3,7 @@ Module contains the data frame widgets.
 """
 
 import datetime as dt
+from decimal import Decimal
 from PySide6.QtWidgets import (QTableView, QWidget, QFrame, QDialog, QVBoxLayout, QButtonGroup, QRadioButton,
                                QLineEdit, QGridLayout, QDialogButtonBox, QSpacerItem, QSizePolicy, QGroupBox,
                                QComboBox, QLabel, QItemDelegate, QStyleOptionViewItem)
@@ -137,6 +138,10 @@ class DataFrameCellEditDialog(QDialog):
         self._data_type_button_group.addButton(self._duration_button)
         self._data_type_layout.addWidget(self._duration_button, 2, 0)
 
+        self._money_button = QRadioButton(self.tr("Money"))
+        self._data_type_button_group.addButton(self._money_button)
+        self._data_type_layout.addWidget(self._money_button, 2, 1)
+
         self._format_group_box = QGroupBox(self.tr("Format"))
         self._format_layout = QVBoxLayout()
         self._format_group_box.setLayout(self._format_layout)
@@ -246,6 +251,16 @@ class DataFrameCellEditDialog(QDialog):
                 self._error_label.setText(self.tr("Invalid duration value."))
                 self._error_label.setVisible(True)
                 return
+        elif self._money_button.isChecked():
+            try:
+                if self._format_combo_box.currentIndex() == 0:
+                    self._value = Decimal.from_float(float(value.replace("$", "").replace(",", "")))
+                elif self._format_combo_box.currentIndex() == 1:
+                    self._value = Decimal.from_float(float(value.replace("€", "").replace(".", "").replace(",", ".")))
+            except ValueError:
+                self._error_label.setText(self.tr("Invalid money value."))
+                self._error_label.setVisible(True)
+                return
 
         self.accept()
 
@@ -287,6 +302,10 @@ class DataFrameCellEditDialog(QDialog):
             self._format_combo_box.clear()
             self._format_combo_box.addItems(["D HH:MM:SS"])
             self._format_combo_box.setEnabled(True)
+        elif button == self._money_button:
+            self._format_combo_box.clear()
+            self._format_combo_box.addItems(["Dollar ($ #,###.##)",
+                                             "Euro (#.###,## €)"])
 
 class DataFrameItemDelegate(QItemDelegate):
     """
