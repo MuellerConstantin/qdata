@@ -28,7 +28,7 @@ class QvdFileFieldValuesDialog(QDialog):
         self._column = column
         self._field_values = field_values
         self._table_model = DataFrameTableModel(self._field_values)
-        self._table_model.end_filtering.connect(self._on_table_model_end_filtering)
+        self._table_model.modelReset.connect(self._on_table_model_reset)
         self._current_filter = None
 
         self.setWindowTitle(self.tr("Field Values"))
@@ -91,7 +91,7 @@ class QvdFileFieldValuesDialog(QDialog):
         self._current_filter = DataFrameFilter(self.tr("Value"), DataFrameFilterOperation.BEGINS_WITH, text)
         self._table_model.add_filter(self._current_filter)
 
-    def _on_table_model_end_filtering(self):
+    def _on_table_model_reset(self):
         """
         Handle the table model ending to filter.
         """
@@ -159,7 +159,7 @@ class QvdFileDataView(QWidget):
     """
     Widget that represents a QVD file data view.
     """
-    table_filtered = Signal()
+    table_reset = Signal()
     table_undoable = Signal(bool)
     table_redoable = Signal(bool)
     table_unsaved_changes = Signal(bool)
@@ -198,9 +198,10 @@ class QvdFileDataView(QWidget):
     @data.setter
     def data(self, value: pd.DataFrame):
         self._table_model = DataFrameTableModel(value)
-        self._table_model.begin_transform.connect(self._on_table_model_begin_transform)
-        self._table_model.end_transform.connect(self._on_table_model_end_transform)
-        self._table_model.end_filtering.connect(self._on_table_model_end_filtering)
+        self._table_model.layoutAboutToBeChanged.connect(self._on_model_layout_about_to_change)
+        self._table_model.layoutChanged.connect(self._on_model_layout_changed)
+        self._table_model.modelReset.connect(self._on_model_reset)
+        self._table_model.filters_reset.connect(self._on_filters_reset)
 
         self._table_view.setModel(self._table_model)
 
@@ -291,6 +292,35 @@ class QvdFileDataView(QWidget):
         """
         self._table_view.mark_saved()
 
+    def _on_model_layout_about_to_change(self):
+        """
+        Handle the layout about to change.
+        """
+        self._filter_tag_view.setEnabled(False)
+        self._table_view.setEnabled(False)
+        self._table_view.loading = True
+
+    def _on_model_layout_changed(self):
+        """
+        Handle the layout changed.
+        """
+        self._filter_tag_view.setEnabled(True)
+        self._table_view.setEnabled(True)
+        self._table_view.loading = False
+
+    def _on_model_reset(self):
+        """
+        Handle the model reset.
+        """
+        self.table_reset.emit()
+
+    def _on_filters_reset(self):
+        """
+        Handle the filters reset.
+        """
+        for index in reversed(range(self._filter_tag_view.layout().count())):
+            self._filter_tag_view.layout().itemAt(index).widget().deleteLater()
+
     def _add_filter(self, filter_: DataFrameFilter):
         """
         Add a filter to the table model.
@@ -307,28 +337,6 @@ class QvdFileDataView(QWidget):
         Remove a filter from the table model.
         """
         self._table_model.remove_filter(filter_)
-
-    def _on_table_model_begin_transform(self):
-        """
-        Handle the table model beginning to transform.
-        """
-        self._filter_tag_view.setEnabled(False)
-        self._table_view.setEnabled(False)
-        self._table_view.loading = True
-
-    def _on_table_model_end_transform(self):
-        """
-        Handle the table model ending to transform.
-        """
-        self._filter_tag_view.setEnabled(True)
-        self._table_view.setEnabled(True)
-        self._table_view.loading = False
-
-    def _on_table_model_end_filtering(self):
-        """
-        Handle the table model ending to filter.
-        """
-        self.table_filtered.emit()
 
     def _on_data_context_menu_copy(self, pos: QPoint):
         """
@@ -506,7 +514,7 @@ class QvdFileWidget(QStackedWidget):
     table_loading = Signal()
     table_loaded = Signal()
     table_loading_errored = Signal()
-    table_filtered = Signal()
+    table_reset = Signal()
     table_undoable = Signal(bool)
     table_redoable = Signal(bool)
     table_unsaved_changes = Signal(bool)
@@ -539,7 +547,7 @@ class QvdFileWidget(QStackedWidget):
         self._file_watcher.fileChanged.connect(self._on_file_changed)
 
         self._data_view = QvdFileDataView()
-        self._data_view.table_filtered.connect(self.table_filtered)
+        self._data_view.table_reset.connect(self.table_reset)
         self._data_view.table_undoable.connect(self.table_undoable)
         self._data_view.table_redoable.connect(self.table_redoable)
         self._data_view.table_unsaved_changes.connect(self.table_unsaved_changes)

@@ -526,7 +526,7 @@ class MainWindow(QMainWindow):
             self._save_as_file_action.setEnabled(True)
             self._export_menu.setEnabled(True)
 
-    def _on_table_filtered(self, qvd_file_widget: QvdFileWidget):
+    def _on_table_reset(self, qvd_file_widget: QvdFileWidget):
         """
         Called when the table is filtered.
         """
@@ -539,6 +539,9 @@ class MainWindow(QMainWindow):
                 self._table_filtered_shape_widget.setVisible(True)
             else:
                 self._table_filtered_shape_widget.setVisible(False)
+            
+            self._table_full_shape_label.setText(
+                f"{qvd_file_widget.get_table_shape()[1]}x{qvd_file_widget.get_table_shape()[0]}")
 
     def _on_table_errored(self, qvd_file_widget: QvdFileWidget):
         """
@@ -686,7 +689,7 @@ class MainWindow(QMainWindow):
 
         qvd_file_widget = QvdFileWidget()
         qvd_file_widget.table_loaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
-        qvd_file_widget.table_filtered.connect(lambda: self._on_table_filtered(qvd_file_widget))
+        qvd_file_widget.table_reset.connect(lambda: self._on_table_reset(qvd_file_widget))
         qvd_file_widget.table_loading_errored.connect(lambda: self._on_table_errored(qvd_file_widget))
         qvd_file_widget.table_loading.connect(lambda: self._on_table_loading(qvd_file_widget))
         qvd_file_widget.table_undoable.connect(lambda undoable: self._on_table_undoable(undoable, qvd_file_widget))
@@ -733,7 +736,7 @@ class MainWindow(QMainWindow):
 
         qvd_file_widget = QvdFileWidget()
         qvd_file_widget.table_loaded.connect(lambda: self._on_table_loaded(qvd_file_widget))
-        qvd_file_widget.table_filtered.connect(lambda: self._on_table_filtered(qvd_file_widget))
+        qvd_file_widget.table_reset.connect(lambda: self._on_table_reset(qvd_file_widget))
         qvd_file_widget.table_loading_errored.connect(lambda: self._on_table_errored(qvd_file_widget))
         qvd_file_widget.table_loading.connect(lambda: self._on_table_loading(qvd_file_widget))
         qvd_file_widget.table_undoable.connect(lambda undoable: self._on_table_undoable(undoable, qvd_file_widget))

@@ -3,6 +3,7 @@ Contains the models for handling tabular data.
 """
 
 from typing import List, Tuple
+from enum import Enum
 import datetime as dt
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal, QThreadPool
 from PySide6.QtGui import QFont
@@ -11,6 +12,12 @@ import pandas as pd
 import numpy as np
 from qdata.core.models.transform import DataFrameFilter
 from qdata.parallel.df import FilterDataFrameTask, SortDataFrameTask
+
+class DataFrameItemDataRole(Enum):
+    """
+    Custom item data roles for the DataFrameTableModel.
+    """
+    DATA_ROLE = Qt.ItemDataRole.UserRole + 1
 
 class DataFrameTableModelOptions:
     """
@@ -67,13 +74,8 @@ class DataFrameTableModel(QAbstractTableModel):
     """
     Custom table model for displaying a pandas DataFrame.
     """
-    begin_transform = Signal()
-    end_transform = Signal()
-    begin_filtering = Signal()
-    end_filtering = Signal()
-    begin_sorting = Signal()
-    end_sorting = Signal()
     data_edited = Signal(int, int, object, object)
+    filters_reset = Signal()
 
     def __init__(self, base_df: pd.DataFrame = None,
                  options: DataFrameTableModelOptions = DataFrameTableModelOptions()):
@@ -86,13 +88,13 @@ class DataFrameTableModel(QAbstractTableModel):
         self._transforming: bool = False
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
-        if parent.isValid() or self.df is None:
+        if self.df is None:
             return 0
 
         return self.df.shape[0]
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
-        if parent.isValid() or self.df is None:
+        if self.df is None:
             return 0
 
         return self.df.shape[1]
@@ -107,7 +109,7 @@ class DataFrameTableModel(QAbstractTableModel):
 
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                 return self._format_data_value(value)
-            elif role == Qt.ItemDataRole.UserRole:
+            elif role == DataFrameItemDataRole.DATA_ROLE:
                 return value
             elif role == Qt.ItemDataRole.FontRole:
                 if value is None or pd.isna(value) or (is_float_dtype(type(value)) and np.isnan(value)):
@@ -125,7 +127,7 @@ class DataFrameTableModel(QAbstractTableModel):
                     return self._format_header_value(self.df.columns[section])
                 elif orientation == Qt.Orientation.Vertical:
                     return self._format_header_value(self.df.index[section])
-            elif role == Qt.ItemDataRole.UserRole:
+            elif role == DataFrameItemDataRole.DATA_ROLE:
                 if orientation == Qt.Orientation.Horizontal:
                     return self.df.columns[section]
                 elif orientation == Qt.Orientation.Vertical:
@@ -135,10 +137,10 @@ class DataFrameTableModel(QAbstractTableModel):
 
     def setData(self, index: QModelIndex, value: object, role: int = ...) -> bool:
         if index.isValid() and self.df is not None:
-            if role == Qt.ItemDataRole.EditRole or role == Qt.ItemDataRole.UserRole:
+            if role == Qt.ItemDataRole.EditRole or role == DataFrameItemDataRole.DATA_ROLE:
                 # Convert view index to pandas index
                 pandas_index = self.df.index[index.row()]
-                previous_value = self.df.loc[pandas_index, self.df.columns[index.column()]]
+                previous_value = self.df.at[pandas_index, self.df.columns[index.column()]]
 
                 if previous_value == value:
                     return False
@@ -148,13 +150,18 @@ class DataFrameTableModel(QAbstractTableModel):
 
                 # Update the transformed DataFrame if it exists as well
                 if self.transformed_df is not None:
-                    self._transformed_df.loc[pandas_index, self.df.columns[index.column()]] = value
+                    self._transformed_df.at[pandas_index, self.df.columns[index.column()]] = value
 
-                self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
+                top_left = self.index(index.row(), index.column())
+                bottom_right = self.index(index.row(), index.column())
+
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
 
                 # Emit the data edited signal only if data was actually edited by the user
                 if role == Qt.ItemDataRole.EditRole:
                     self.data_edited.emit(index.row(), index.column(), previous_value, value)
+                
+                self.reset_filters()
 
                 return True
 
@@ -164,10 +171,7 @@ class DataFrameTableModel(QAbstractTableModel):
         if self.df is None:
             return
 
-        self._transforming = True
-        self.begin_transform.emit()
-        self.begin_sorting.emit()
-        self.beginResetModel()
+        self.layoutAboutToBeChanged.emit()
 
         copy_df = self.df.copy()
         column = copy_df.columns[column]
@@ -178,6 +182,24 @@ class DataFrameTableModel(QAbstractTableModel):
         task.signals.finished.connect(self._on_sort_task_finished)
 
         QThreadPool.globalInstance().start(task)
+
+    def _on_sort_task_data(self, data: pd.DataFrame):
+        """
+        Handle the task data.
+        """
+        self._transformed_df = data
+
+    def _on_sort_task_error(self, error: Exception):
+        """
+        Handle the task error.
+        """
+        raise error
+
+    def _on_sort_task_finished(self):
+        """
+        Handle the task finishing.
+        """
+        self.layoutChanged.emit()
 
     @property
     def base_df(self) -> pd.DataFrame:
@@ -208,13 +230,6 @@ class DataFrameTableModel(QAbstractTableModel):
         return self._filters
 
     @property
-    def transforming(self) -> bool:
-        """
-        Get whether the model is transforming.
-        """
-        return self._transforming
-
-    @property
     def options(self) -> DataFrameTableModelOptions:
         """
         Get the options.
@@ -234,6 +249,14 @@ class DataFrameTableModel(QAbstractTableModel):
         """
         self._filters.remove(filter_)
         self._apply_filters()
+
+    def reset_filters(self):
+        """
+        Reset the filters.
+        """
+        self._filters.clear()
+        self._apply_filters()
+        self.filters_reset.emit()
 
     def _format_data_value(self, value: object) -> str:
         """
@@ -293,9 +316,6 @@ class DataFrameTableModel(QAbstractTableModel):
         if self._base_df is None:
             return
 
-        self._transforming = True
-        self.begin_transform.emit()
-        self.begin_filtering.emit()
         self.beginResetModel()
 
         copy_df = self._base_df.copy()
@@ -323,28 +343,4 @@ class DataFrameTableModel(QAbstractTableModel):
         """
         Handle the task finishing.
         """
-        self._transforming = False
-        self.end_transform.emit()
-        self.end_filtering.emit()
-        self.endResetModel()
-
-    def _on_sort_task_data(self, data: pd.DataFrame):
-        """
-        Handle the task data.
-        """
-        self._transformed_df = data
-
-    def _on_sort_task_error(self, error: Exception):
-        """
-        Handle the task error.
-        """
-        raise error
-
-    def _on_sort_task_finished(self):
-        """
-        Handle the task finishing.
-        """
-        self._transforming = False
-        self.end_transform.emit()
-        self.end_sorting.emit()
         self.endResetModel()

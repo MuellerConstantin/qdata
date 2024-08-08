@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QTableView, QWidget, QFrame, QDialog, QVBoxLayout
 from PySide6.QtGui import QResizeEvent, QPaintEvent, QPainter, QColor, QUndoStack, QUndoCommand, QIcon
 from PySide6.QtCore import Qt, Signal, QModelIndex
 from qdata.widgets.progress import Spinner
-from qdata.core.models.df import DataFrameTableModel
+from qdata.core.models.df import DataFrameTableModel, DataFrameItemDataRole
 
 class LoadingOverlay(QWidget):
     """
@@ -58,10 +58,10 @@ class DataFrameEditCommand(QUndoCommand):
         self._new_value = new_value
 
     def undo(self):
-        self._model.setData(self._model.index(self._row, self._col), self._old_value, Qt.ItemDataRole.UserRole)
+        self._model.setData(self._model.index(self._row, self._col), self._old_value, DataFrameItemDataRole.DATA_ROLE)
 
     def redo(self):
-        self._model.setData(self._model.index(self._row, self._col), self._new_value, Qt.ItemDataRole.UserRole)
+        self._model.setData(self._model.index(self._row, self._col), self._new_value, DataFrameItemDataRole.DATA_ROLE)
 
 class DataFrameCellEditDialog(QDialog):
     """
