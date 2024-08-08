@@ -550,7 +550,7 @@ class QvdFileWidget(QStackedWidget):
         self._data_view.table_reset.connect(self.table_reset)
         self._data_view.table_undoable.connect(self.table_undoable)
         self._data_view.table_redoable.connect(self.table_redoable)
-        self._data_view.table_unsaved_changes.connect(self.table_unsaved_changes)
+        self._data_view.table_unsaved_changes.connect(lambda value: self.table_unsaved_changes.emit(value or self._path is None))
         self.addWidget(self._data_view)
 
         self._error_view = QvdFileErrorView()
