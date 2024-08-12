@@ -2,10 +2,10 @@
 Contains the models for handling tabular data.
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from enum import Enum
 import datetime as dt
-from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal, QThreadPool
+from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal, QThreadPool, QAbstractProxyModel
 from PySide6.QtGui import QFont
 from pandas.api.types import is_integer_dtype, is_float_dtype, is_datetime64_any_dtype
 import pandas as pd
@@ -75,40 +75,62 @@ class DataFrameTableModel(QAbstractTableModel):
     Custom table model for displaying a pandas DataFrame.
     """
     data_edited = Signal(int, int, object, object)
-    filters_reset = Signal()
 
-    def __init__(self, base_df: pd.DataFrame = None,
+    def __init__(self, dataframe: pd.DataFrame = pd.DataFrame(),
                  options: DataFrameTableModelOptions = DataFrameTableModelOptions()):
         super().__init__()
 
         self._options: DataFrameTableModelOptions = options
-        self._base_df: pd.DataFrame = base_df
-        self._transformed_df: pd.DataFrame = None
-        self._filters: List[DataFrameFilter] = []
-        self._transforming: bool = False
+        self._dataframe: pd.DataFrame = dataframe
 
-    def rowCount(self, parent: QModelIndex = ...) -> int:
-        if self.df is None:
+    @property
+    def options(self) -> DataFrameTableModelOptions:
+        """
+        Get the options.
+        """
+        return self._options
+
+    @options.setter
+    def options(self, options: DataFrameTableModelOptions):
+        self.beginResetModel()
+        self._options = options
+        self.endResetModel()
+
+    @property
+    def dataframe(self):
+        """
+        Get the dataframe property.
+        """
+        return self._dataframe
+
+    @dataframe.setter
+    def dataframe(self, dataframe: pd.DataFrame):
+        self.beginResetModel()
+        self._dataframe = dataframe
+        self.endResetModel()
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if parent != QModelIndex():
             return 0
 
-        return self.df.shape[0]
+        return len(self._dataframe)
 
-    def columnCount(self, parent: QModelIndex = ...) -> int:
-        if self.df is None:
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if parent != QModelIndex():
             return 0
 
-        return self.df.shape[1]
+        return len(self._dataframe.columns)
 
     # pylint: disable-next=unused-argument
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
     def data(self, index: QModelIndex, role: int = ...) -> object:
-        if index.isValid() and self.df is not None:
-            value = self.df.iloc[index.row(), index.column()]
+        if index.isValid() and self._dataframe is not None:
+            value = self._dataframe.iat[index.row(), index.column()]
 
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-                return self._format_data_value(value)
+                return self.format_data_value(value)
             elif role == DataFrameItemDataRole.DATA_ROLE:
                 return value
             elif role == Qt.ItemDataRole.FontRole:
@@ -121,144 +143,43 @@ class DataFrameTableModel(QAbstractTableModel):
         return None
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> object:
-        if self.df is not None:
+        if self._dataframe is not None:
             if role == Qt.ItemDataRole.DisplayRole:
                 if orientation == Qt.Orientation.Horizontal:
-                    return self._format_header_value(self.df.columns[section])
+                    return self.format_header_value(self._dataframe.columns[section])
                 elif orientation == Qt.Orientation.Vertical:
-                    return self._format_header_value(self.df.index[section])
+                    return self.format_header_value(self._dataframe.index[section])
             elif role == DataFrameItemDataRole.DATA_ROLE:
                 if orientation == Qt.Orientation.Horizontal:
-                    return self.df.columns[section]
+                    return self._dataframe.columns[section]
                 elif orientation == Qt.Orientation.Vertical:
-                    return self.df.index[section]
+                    return self._dataframe.index[section]
 
         return None
 
     def setData(self, index: QModelIndex, value: object, role: int = ...) -> bool:
-        if index.isValid() and self.df is not None:
+        if index.isValid() and self._dataframe is not None:
             if role == Qt.ItemDataRole.EditRole or role == DataFrameItemDataRole.DATA_ROLE:
-                # Convert view index to pandas index
-                pandas_index = self.df.index[index.row()]
-                previous_value = self.df.at[pandas_index, self.df.columns[index.column()]]
+                previous_value = self._dataframe.iat[index.row(), index.column()]
 
                 if previous_value == value:
                     return False
 
                 # Update the base DataFrame
-                self.base_df.loc[pandas_index, self.df.columns[index.column()]] = value
-
-                # Update the transformed DataFrame if it exists as well
-                if self.transformed_df is not None:
-                    self._transformed_df.at[pandas_index, self.df.columns[index.column()]] = value
+                self._dataframe.iat[index.row(), index.column()] = value
 
                 top_left = self.index(index.row(), index.column())
                 bottom_right = self.index(index.row(), index.column())
 
-                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
-
-                # Emit the data edited signal only if data was actually edited by the user
-                if role == Qt.ItemDataRole.EditRole:
-                    self.data_edited.emit(index.row(), index.column(), previous_value, value)
-                
-                self.reset_filters()
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole,
+                                                               Qt.ItemDataRole.EditRole,
+                                                                DataFrameItemDataRole.DATA_ROLE])
 
                 return True
 
         return False
 
-    def sort(self, column: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder):
-        if self.df is None:
-            return
-
-        self.layoutAboutToBeChanged.emit()
-
-        copy_df = self.df.copy()
-        column = copy_df.columns[column]
-
-        task = SortDataFrameTask(copy_df, column, order == Qt.SortOrder.AscendingOrder)
-        task.signals.data.connect(self._on_sort_task_data)
-        task.signals.error.connect(self._on_sort_task_error)
-        task.signals.finished.connect(self._on_sort_task_finished)
-
-        QThreadPool.globalInstance().start(task)
-
-    def _on_sort_task_data(self, data: pd.DataFrame):
-        """
-        Handle the task data.
-        """
-        self._transformed_df = data
-
-    def _on_sort_task_error(self, error: Exception):
-        """
-        Handle the task error.
-        """
-        raise error
-
-    def _on_sort_task_finished(self):
-        """
-        Handle the task finishing.
-        """
-        self.layoutChanged.emit()
-
-    @property
-    def base_df(self) -> pd.DataFrame:
-        """
-        Get the DataFrame.
-        """
-        return self._base_df
-
-    @property
-    def transformed_df(self) -> pd.DataFrame:
-        """
-        Get the transformed DataFrame.
-        """
-        return self._transformed_df
-
-    @property
-    def df(self) -> pd.DataFrame:
-        """
-        Get the DataFrame.
-        """
-        return self._transformed_df if self._transformed_df is not None else self._base_df
-
-    @property
-    def filters(self) -> List[DataFrameFilter]:
-        """
-        Get the filters.
-        """
-        return self._filters
-
-    @property
-    def options(self) -> DataFrameTableModelOptions:
-        """
-        Get the options.
-        """
-        return self._options
-
-    def add_filter(self, filter_: DataFrameFilter):
-        """
-        Add a filter to the DataFrame.
-        """
-        self._filters.append(filter_)
-        self._apply_filters()
-
-    def remove_filter(self, filter_: DataFrameFilter):
-        """
-        Remove a filter from the DataFrame.
-        """
-        self._filters.remove(filter_)
-        self._apply_filters()
-
-    def reset_filters(self):
-        """
-        Reset the filters.
-        """
-        self._filters.clear()
-        self._apply_filters()
-        self.filters_reset.emit()
-
-    def _format_data_value(self, value: object) -> str:
+    def format_data_value(self, value: object) -> str:
         """
         Format a data value for display.
         """
@@ -299,7 +220,7 @@ class DataFrameTableModel(QAbstractTableModel):
 
         return str(value)
 
-    def _format_header_value(self, value: object) -> str:
+    def format_header_value(self, value: object) -> str:
         """
         Format a header value for display.
         """
@@ -309,16 +230,227 @@ class DataFrameTableModel(QAbstractTableModel):
 
         return str(value)
 
+class DataFrameSortFilterProxyModel(QAbstractProxyModel):
+    """
+    Table filter proxy model class that filters a pandas DataFrame.
+    """
+    invalidated = Signal()
+    begin_transform = Signal()
+    end_transform = Signal()
+
+    def __init__(self):
+        super().__init__()
+
+        self._source_model: DataFrameTableModel = None
+        self._proxy_dataframe: pd.DataFrame = None
+        self._source_to_proxy_mapping: Dict[int, int] = {}
+        self._proxy_to_source_mapping: Dict[int, int] = {}
+        self._filters: List[DataFrameFilter] = []
+
+    @property
+    def dataframe(self) -> pd.DataFrame:
+        """
+        Get the proxy dataframe.
+        """
+        return self._proxy_dataframe
+
+    @property
+    def filters(self) -> List[DataFrameFilter]:
+        """
+        Get the set filters.
+        """
+        return self._filters
+
+    def setSourceModel(self, source_model: DataFrameTableModel):
+        self.beginResetModel()
+
+        if self._source_model is not None:
+            self._source_model.dataChanged.disconnect(self._on_source_model_data_changed)
+            self._source_model.headerDataChanged.disconnect(self._on_source_model_header_data_changed)
+            self._source_model.layoutAboutToBeChanged.disconnect(self.layoutAboutToBeChanged.emit)
+            self._source_model.layoutChanged.disconnect(self._on_source_model_layout_changed)
+            self._source_model.modelAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
+            self._source_model.modelReset.disconnect(self._on_source_model_model_reset)
+            self._source_model.rowsAboutToBeInserted.disconnect(self.rowsAboutToBeInserted.emit)
+            self._source_model.rowsInserted.disconnect(self._on_source_model_rows_inserted)
+            self._source_model.rowsAboutToBeMoved.disconnect(self.rowsAboutToBeMoved.emit)
+            self._source_model.rowsMoved.disconnect(self._on_source_model_rows_moved)
+            self._source_model.rowsAboutToBeRemoved.disconnect(self.rowsAboutToBeRemoved.emit)
+            self._source_model.rowsRemoved.disconnect(self._on_source_model_rows_removed)
+            self._source_model.columnsAboutToBeInserted.disconnect(self.columnsAboutToBeInserted.emit)
+            self._source_model.columnsInserted.disconnect(self._on_source_model_columns_inserted)
+            self._source_model.columnsAboutToBeMoved.disconnect(self.columnsAboutToBeMoved.emit)
+            self._source_model.columnsMoved.disconnect(self._on_source_model_columns_moved)
+            self._source_model.columnsAboutToBeRemoved.disconnect(self.columnsAboutToBeRemoved.emit)
+            self._source_model.columnsRemoved.disconnect(self._on_source_model_columns_removed)
+
+        self._source_model = source_model
+        self._proxy_dataframe = self._source_model.dataframe.copy()
+
+        self._update_mapping()
+
+        self._source_model.dataChanged.connect(self._on_source_model_data_changed)
+        self._source_model.headerDataChanged.connect(self._on_source_model_header_data_changed)
+        self._source_model.layoutAboutToBeChanged.connect(self.layoutAboutToBeChanged.emit)
+        self._source_model.layoutChanged.connect(self._on_source_model_layout_changed)
+        self._source_model.modelAboutToBeReset.connect(self.modelAboutToBeReset.emit)
+        self._source_model.modelReset.connect(self._on_source_model_model_reset)
+        self._source_model.rowsAboutToBeInserted.connect(self.rowsAboutToBeInserted.emit)
+        self._source_model.rowsInserted.connect(self._on_source_model_rows_inserted)
+        self._source_model.rowsAboutToBeMoved.connect(self.rowsAboutToBeMoved.emit)
+        self._source_model.rowsMoved.connect(self._on_source_model_rows_moved)
+        self._source_model.rowsAboutToBeRemoved.connect(self.rowsAboutToBeRemoved.emit)
+        self._source_model.rowsRemoved.connect(self._on_source_model_rows_removed)
+        self._source_model.columnsAboutToBeInserted.connect(self.columnsAboutToBeInserted.emit)
+        self._source_model.columnsInserted.connect(self._on_source_model_columns_inserted)
+        self._source_model.columnsAboutToBeMoved.connect(self.columnsAboutToBeMoved.emit)
+        self._source_model.columnsMoved.connect(self._on_source_model_columns_moved)
+        self._source_model.columnsAboutToBeRemoved.connect(self.columnsAboutToBeRemoved.emit)
+        self._source_model.columnsRemoved.connect(self._on_source_model_columns_removed)
+
+        self.endResetModel()
+
+    def sourceModel(self) -> DataFrameTableModel:
+        return self._source_model
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if parent != QModelIndex():
+            return 0
+
+        return len(self._proxy_dataframe)
+
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if parent != QModelIndex():
+            return 0
+
+        return len(self._proxy_dataframe.columns)
+
+    def data(self, index: QModelIndex, role: int = ...) -> object:
+        if index.isValid() and self._proxy_dataframe is not None:
+            value = self._proxy_dataframe.iat[index.row(), index.column()]
+
+            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+                return self._source_model.format_data_value(value)
+            elif role == DataFrameItemDataRole.DATA_ROLE:
+                return value
+            elif role == Qt.ItemDataRole.FontRole:
+                if value is None or pd.isna(value) or (is_float_dtype(type(value)) and np.isnan(value)):
+                    font = QFont()
+                    font.setItalic(True)
+
+                    return font
+
+        return None
+
+    def setData(self, index: QModelIndex, value: object, role: int = ...) -> bool:
+        source_index = self.mapToSource(index)
+
+        if source_index.isValid():
+            return self._source_model.setData(source_index, value, role)
+
+        return False
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> object:
+        if self._proxy_dataframe is not None:
+            if role == Qt.ItemDataRole.DisplayRole:
+                if orientation == Qt.Orientation.Horizontal:
+                    return self._source_model.format_header_value(self._proxy_dataframe.columns[section])
+                elif orientation == Qt.Orientation.Vertical:
+                    return self._source_model.format_header_value(self._proxy_dataframe.index[section])
+            elif role == DataFrameItemDataRole.DATA_ROLE:
+                if orientation == Qt.Orientation.Horizontal:
+                    return self._proxy_dataframe.columns[section]
+                elif orientation == Qt.Orientation.Vertical:
+                    return self._data_proxy_dataframeframe.index[section]
+
+        return None
+
+    # pylint: disable-next=unused-argument
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+
+    # pylint: disable-next=unused-argument
+    def parent(self, index: QModelIndex) -> QModelIndex:
+        return QModelIndex()
+
+    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
+        if parent != QModelIndex():
+            return QModelIndex()
+
+        return self.createIndex(row, column)
+
+    def mapFromSource(self, source_index: QModelIndex) -> QModelIndex:
+        if source_index.row() in self._source_to_proxy_mapping:
+            return self.index(self._source_to_proxy_mapping[source_index.row()], source_index.column())
+
+        return QModelIndex()
+
+    def mapToSource(self, proxy_index: QModelIndex) -> QModelIndex:
+        if proxy_index.row() in self._proxy_to_source_mapping:
+            return self._source_model.index(self._proxy_to_source_mapping[proxy_index.row()], proxy_index.column())
+
+        return QModelIndex()
+
+    def sort(self, column: int, order: Qt.SortOrder = Qt.AscendingOrder):
+        if self._source_model.dataframe is None:
+            return
+
+        self.layoutAboutToBeChanged.emit()
+        self.begin_transform.emit()
+
+        copy_df = (self._proxy_dataframe.copy() if self._proxy_dataframe is not None
+                   else self._source_model.dataframe.copy())
+        column = copy_df.columns[column]
+
+        task = SortDataFrameTask(copy_df, column, order == Qt.SortOrder.AscendingOrder)
+        task.signals.data.connect(self._on_sort_task_data)
+        task.signals.error.connect(self._on_sort_task_error)
+        task.signals.finished.connect(self._on_sort_task_finished)
+
+        QThreadPool.globalInstance().start(task)
+
+    def add_filter(self, filter_: DataFrameFilter):
+        """
+        Add a filter to the model.
+        """
+        self._filters.append(filter_)
+
+        self._apply_filters()
+
+    def remove_filter(self, filter_: DataFrameFilter):
+        """
+        Remove a filter from the model.
+        """
+        self._filters.remove(filter_)
+
+        self._apply_filters()
+
+    def clear_filters(self):
+        """
+        Clear all filters from the model.
+        """
+        self._filters.clear()
+
+        self._apply_filters()
+
+    def invalidate(self):
+        """
+        Invalidate the model.
+        """
+        self.clear_filters()
+        self._proxy_dataframe = self._source_model.dataframe.copy()
+        self._update_mapping()
+
+        self.invalidated.emit()
+
     def _apply_filters(self):
-        """
-        Apply the filters to the DataFrame.
-        """
-        if self._base_df is None:
+        if self._source_model.dataframe is None:
             return
 
         self.beginResetModel()
+        self.begin_transform.emit()
 
-        copy_df = self._base_df.copy()
+        copy_df = self._source_model.dataframe.copy()
 
         task = FilterDataFrameTask(copy_df, self._filters)
         task.signals.data.connect(self._on_filter_task_data)
@@ -327,11 +459,25 @@ class DataFrameTableModel(QAbstractTableModel):
 
         QThreadPool.globalInstance().start(task)
 
+    def _update_mapping(self):
+        self._source_to_proxy_mapping = {}
+        self._proxy_to_source_mapping = {}
+
+        if self._source_model is None:
+            return
+
+        for proxy_location_index, pandas_index in enumerate(self._proxy_dataframe.index):
+            source_location_index = self._source_model.dataframe.index.get_loc(pandas_index)
+            self._source_to_proxy_mapping[source_location_index] = proxy_location_index
+            self._proxy_to_source_mapping[proxy_location_index] = source_location_index
+
     def _on_filter_task_data(self, data: pd.DataFrame):
         """
         Handle the task data.
         """
-        self._transformed_df = data
+        self._proxy_dataframe = data
+
+        self._update_mapping()
 
     def _on_filter_task_error(self, error: Tuple[Exception, type, str]):
         """
@@ -343,4 +489,98 @@ class DataFrameTableModel(QAbstractTableModel):
         """
         Handle the task finishing.
         """
+        self.endResetModel()
+        self.end_transform.emit()
+
+    def _on_sort_task_data(self, data: pd.DataFrame):
+        """
+        Handle the task data.
+        """
+        self._proxy_dataframe = data
+
+        self._update_mapping()
+
+    def _on_sort_task_error(self, error: Exception):
+        """
+        Handle the task error.
+        """
+        raise error
+
+    def _on_sort_task_finished(self):
+        """
+        Handle the task finishing.
+        """
+        self.layoutChanged.emit()
+        self.end_transform.emit()
+
+    def _on_source_model_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex, roles: List[int]):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_header_data_changed(self, orientation: Qt.Orientation, first: int, last: int):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_model_reset(self):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_layout_changed(self):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_rows_inserted(self, parent: QModelIndex, start: int, end: int):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_rows_removed(self, parent: QModelIndex, start: int, end: int):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_rows_moved(self, parent: QModelIndex, start: int, end: int,
+                                    destination: QModelIndex, row: int):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_columns_inserted(self, parent: QModelIndex, start: int, end: int):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_columns_removed(self, parent: QModelIndex, start: int, end: int):
+        self.beginResetModel()
+
+        self.invalidate()
+
+        self.endResetModel()
+
+    def _on_source_model_columns_moved(self, parent: QModelIndex,
+                                       start: int, end: int, destination: QModelIndex, column: int):
+        self.beginResetModel()
+
+        self.invalidate()
+
         self.endResetModel()

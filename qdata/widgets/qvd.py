@@ -12,7 +12,7 @@ import pandas as pd
 from qdata.widgets.progress import Spinner
 from qdata.widgets.filter import FilterTagView, FilterTag
 from qdata.widgets.df import DataFrameTableView
-from qdata.core.models.df import DataFrameTableModel
+from qdata.core.models.df import DataFrameTableModel, DataFrameSortFilterProxyModel
 from qdata.core.models.transform import DataFrameFilter, DataFrameFilterOperation
 from qdata.parallel.qvd import LoadQvdFileTask, PersistQvdFileTask, ImportCsvFileTask, ExportCsvFileTask
 
@@ -27,7 +27,8 @@ class QvdFileFieldValuesDialog(QDialog):
 
         self._column = column
         self._field_values = field_values
-        self._table_model = DataFrameTableModel(self._field_values)
+        self._table_model = DataFrameSortFilterProxyModel()
+        self._table_model.setSourceModel(DataFrameTableModel(self._field_values))
         self._table_model.modelReset.connect(self._on_table_model_reset)
         self._current_filter = None
 
@@ -163,11 +164,13 @@ class QvdFileDataView(QWidget):
     table_undoable = Signal(bool)
     table_redoable = Signal(bool)
     table_unsaved_changes = Signal(bool)
+    table_begin_loading = Signal()
+    table_end_loading = Signal()
 
     def __init__(self, parent: QWidget = None):
         super().__init__(parent)
 
-        self._table_model: DataFrameTableModel = None
+        self._table_model: DataFrameSortFilterProxyModel = None
 
         self._central_layout = QVBoxLayout()
         self._central_layout.setContentsMargins(10, 10, 10, 10)
@@ -186,6 +189,8 @@ class QvdFileDataView(QWidget):
         self._table_view.table_unsaved_changes.connect(self.table_unsaved_changes)
         self._table_view.table_undoable.connect(self.table_undoable)
         self._table_view.table_redoable.connect(self.table_redoable)
+        self._table_view.table_begin_loading.connect(self._on_table_begin_loading)
+        self._table_view.table_end_loading.connect(self._on_table_end_loading)
         self._central_layout.addWidget(self._table_view, 1)
 
     @property
@@ -193,15 +198,16 @@ class QvdFileDataView(QWidget):
         """
         Get the data in the table.
         """
-        return self._table_model.base_df if self._table_model is not None else None
+        return self._table_model.dataframe if self._table_model is not None else None
 
     @data.setter
     def data(self, value: pd.DataFrame):
-        self._table_model = DataFrameTableModel(value)
+        self._table_model = DataFrameSortFilterProxyModel()
+        self._table_model.setSourceModel(DataFrameTableModel(value))
         self._table_model.layoutAboutToBeChanged.connect(self._on_model_layout_about_to_change)
         self._table_model.layoutChanged.connect(self._on_model_layout_changed)
         self._table_model.modelReset.connect(self._on_model_reset)
-        self._table_model.filters_reset.connect(self._on_filters_reset)
+        self._table_model.invalidated.connect(self._on_invalidated)
 
         self._table_view.setModel(self._table_model)
 
@@ -260,19 +266,19 @@ class QvdFileDataView(QWidget):
         """
         Get the shape of the original data.
         """
-        if self._table_model is None or self._table_model.base_df is None:
+        if self._table_model is None:
             return None
 
-        return self._table_model.base_df.shape
+        return self._table_model.sourceModel().rowCount(), self._table_model.sourceModel().columnCount()
 
     def get_filtered_data_shape(self) -> Tuple[int, int]:
         """
         Get the shape of the filtered data.
         """
-        if self._table_model is None or self._table_model.transformed_df is None:
+        if self._table_model is None:
             return None
 
-        return self._table_model.transformed_df.shape
+        return self._table_model.rowCount(), self._table_model.columnCount()
 
     def undo(self):
         """
@@ -314,7 +320,7 @@ class QvdFileDataView(QWidget):
         """
         self.table_reset.emit()
 
-    def _on_filters_reset(self):
+    def _on_invalidated(self):
         """
         Handle the filters reset.
         """
@@ -351,8 +357,8 @@ class QvdFileDataView(QWidget):
         Handle the context menu filter action.
         """
         selected_index = self._table_view.indexAt(pos)
-        column_name = self._table_model.df.columns[selected_index.column()]
-        column_value = self._table_model.df.iloc[selected_index.row(), selected_index.column()]
+        column_name = self._table_model.dataframe.columns[selected_index.column()]
+        column_value = self._table_model.dataframe.iloc[selected_index.row(), selected_index.column()]
 
         self._add_filter(DataFrameFilter(column_name, operation, column_value))
 
@@ -437,6 +443,20 @@ class QvdFileDataView(QWidget):
         field_values_action.triggered.connect(lambda: self._on_header_context_field_values(pos))
 
         menu.exec(self._table_view.horizontalHeader().mapToGlobal(pos))
+
+    def _on_table_begin_loading(self):
+        """
+        Handle the table begin loading.
+        """
+        self._filter_tag_view.setEnabled(False)
+        self.table_begin_loading.emit()
+
+    def _on_table_end_loading(self):
+        """
+        Handle the table end loading.
+        """
+        self._filter_tag_view.setEnabled(True)
+        self.table_end_loading.emit()
 
 class QvdFileErrorView(QWidget):
     """

@@ -2,6 +2,7 @@
 Module contains the data frame widgets.
 """
 
+from typing import Union
 import datetime as dt
 from decimal import Decimal
 from PySide6.QtWidgets import (QTableView, QWidget, QFrame, QDialog, QVBoxLayout, QButtonGroup, QRadioButton,
@@ -10,7 +11,7 @@ from PySide6.QtWidgets import (QTableView, QWidget, QFrame, QDialog, QVBoxLayout
 from PySide6.QtGui import QResizeEvent, QPaintEvent, QPainter, QColor, QUndoStack, QUndoCommand, QIcon
 from PySide6.QtCore import Qt, Signal, QModelIndex
 from qdata.widgets.progress import Spinner
-from qdata.core.models.df import DataFrameTableModel, DataFrameItemDataRole
+from qdata.core.models.df import DataFrameTableModel, DataFrameSortFilterProxyModel, DataFrameItemDataRole
 
 class LoadingOverlay(QWidget):
     """
@@ -48,7 +49,8 @@ class DataFrameEditCommand(QUndoCommand):
     """
     Command for editing a data frame.
     """
-    def __init__(self, model: DataFrameTableModel, row: int, col: int, old_value: object, new_value: object):
+    def __init__(self, model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel],
+                 row: int, col: int, old_value: object, new_value: object):
         super().__init__()
 
         self._model = model
@@ -71,6 +73,7 @@ class DataFrameCellEditDialog(QDialog):
         super().__init__(parent)
 
         self._value = None
+        self._previous_value = current_value
 
         self.setWindowTitle(self.tr("Edit Value"))
         self.setFixedSize(400, 350)
@@ -165,6 +168,13 @@ class DataFrameCellEditDialog(QDialog):
         Get the value.
         """
         return self._value
+
+    @property
+    def previous_value(self) -> str:
+        """
+        Get the previous value.
+        """
+        return self._previous_value
 
     def _on_apply(self) -> None:
         """
@@ -311,14 +321,25 @@ class DataFrameItemDelegate(QItemDelegate):
     """
     Data frame item delegate.
     """
+    def __init__(self, undo_stack: QUndoStack, parent: QWidget = None):
+        super().__init__(parent)
+
+        self._undo_stack = undo_stack
+
     def createEditor(self, parent: QWidget, _: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
         current_value = index.data(Qt.ItemDataRole.DisplayRole)
 
         return DataFrameCellEditDialog(current_value, parent)
 
-    def setModelData(self, editor: QWidget, model: DataFrameTableModel, index: QModelIndex) -> None:
+    def setModelData(self, editor: DataFrameCellEditDialog,
+                     model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel],
+                     index: QModelIndex) -> None:
         if editor.result() == QDialog.DialogCode.Accepted:
-            model.setData(index, editor.value, Qt.ItemDataRole.EditRole)
+            previous_value = editor.previous_value
+            new_value = editor.value
+
+            self._undo_stack.push(DataFrameEditCommand(model, index.row(), index.column(),
+                                                       previous_value, new_value))
 
 class DataFrameTableView(QTableView):
     """
@@ -327,6 +348,8 @@ class DataFrameTableView(QTableView):
     table_unsaved_changes = Signal(bool)
     table_undoable = Signal(bool)
     table_redoable = Signal(bool)
+    table_begin_loading = Signal()
+    table_end_loading = Signal()
 
     def __init__(self, parent: QWidget = None):
         super().__init__(parent)
@@ -350,7 +373,7 @@ class DataFrameTableView(QTableView):
         self._loading_overlay.resize(self.width(), self.height())
         self._loading_overlay.hide()
 
-        self.setItemDelegate(DataFrameItemDelegate(self))
+        self.setItemDelegate(DataFrameItemDelegate(self._undo_stack, self))
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -375,9 +398,11 @@ class DataFrameTableView(QTableView):
         if self._loading:
             self._loading_overlay.show()
             self._loading_overlay.setEnabled(True)
+            self.table_begin_loading.emit()
         else:
             self._loading_overlay.hide()
             self._loading_overlay.setEnabled(False)
+            self.table_end_loading.emit()
 
     @property
     def undoable(self) -> bool:
@@ -400,11 +425,12 @@ class DataFrameTableView(QTableView):
         """
         return not self._undo_stack.isClean()
 
-    def setModel(self, model: DataFrameTableModel) -> None:
+    def setModel(self, model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel]) -> None:
         super().setModel(model)
 
         if model is not None:
-            model.data_edited.connect(self._on_data_edit)
+            model.begin_transform.connect(self._on_begin_transform)
+            model.end_transform.connect(self._on_end_transform)
 
     def undo(self) -> None:
         """
@@ -424,5 +450,8 @@ class DataFrameTableView(QTableView):
         """
         self._undo_stack.setClean()
 
-    def _on_data_edit(self, row: int, col: int, old_value: object, new_value: object) -> None:
-        self._undo_stack.push(DataFrameEditCommand(self.model(), row, col, old_value, new_value))
+    def _on_begin_transform(self) -> None:
+        self.loading = True
+
+    def _on_end_transform(self) -> None:
+        self.loading = False
