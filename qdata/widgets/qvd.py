@@ -6,7 +6,7 @@ from typing import Tuple
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
                                QMenu, QApplication, QDialog, QLineEdit, QDialogButtonBox,
                                QStackedWidget, QGridLayout, QMessageBox, QToolBar, QToolButton)
-from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal, QFileSystemWatcher, QModelIndex
+from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal, QFileSystemWatcher, QItemSelection
 from PySide6.QtGui import QIcon
 import pandas as pd
 from qdata.widgets.progress import Spinner
@@ -179,12 +179,17 @@ class QvdFileDataView(QWidget):
         self._toolbar = QToolBar()
         self._central_layout.addWidget(self._toolbar)
 
-        self._add_row_button = QToolButton()
-        self._add_row_button.setIcon(QIcon(":/icons/add-row-green-600.svg"))
-        self._add_row_button.setToolTip(self.tr("Add Row"))
-        self._add_row_button.clicked.connect(self._on_add_row)
-        self._add_row_button.setEnabled(False)
-        self._toolbar.addWidget(self._add_row_button)
+        self._prepend_row_button = QToolButton()
+        self._prepend_row_button.setIcon(QIcon(":/icons/prepend-row-green-600.svg"))
+        self._prepend_row_button.setToolTip(self.tr("Prepend Row"))
+        self._prepend_row_button.clicked.connect(self._on_prepend_row)
+        self._toolbar.addWidget(self._prepend_row_button)
+
+        self._append_row_button = QToolButton()
+        self._append_row_button.setIcon(QIcon(":/icons/append-row-green-600.svg"))
+        self._append_row_button.setToolTip(self.tr("Append Row"))
+        self._append_row_button.clicked.connect(self._on_append_row)
+        self._toolbar.addWidget(self._append_row_button)
 
         self._remove_row_button = QToolButton()
         self._remove_row_button.setIcon(QIcon(":/icons/remove-row-green-600.svg"))
@@ -208,7 +213,6 @@ class QvdFileDataView(QWidget):
         self._table_view.table_redoable.connect(self.table_redoable)
         self._table_view.table_begin_loading.connect(self._on_table_begin_loading)
         self._table_view.table_end_loading.connect(self._on_table_end_loading)
-        self._table_view.clicked.connect(self._on_clicked)
         self._central_layout.addWidget(self._table_view, 1)
 
     @property
@@ -220,6 +224,14 @@ class QvdFileDataView(QWidget):
 
     @data.setter
     def data(self, value: pd.DataFrame):
+        if self._table_model is not None:
+            self._table_model.layoutAboutToBeChanged.disconnect(self._on_model_layout_about_to_change)
+            self._table_model.layoutChanged.disconnect(self._on_model_layout_changed)
+            self._table_model.modelReset.disconnect(self._on_model_reset)
+            self._table_model.invalidated.disconnect(self._on_invalidated)
+
+            self._table_view.selectionModel().selectionChanged.disconnect(self._on_selection_changed)
+
         self._table_model = DataFrameSortFilterProxyModel()
         self._table_model.setSourceModel(DataFrameTableModel(value))
         self._table_model.layoutAboutToBeChanged.connect(self._on_model_layout_about_to_change)
@@ -228,6 +240,8 @@ class QvdFileDataView(QWidget):
         self._table_model.invalidated.connect(self._on_invalidated)
 
         self._table_view.setModel(self._table_model)
+
+        self._table_view.selectionModel().selectionChanged.connect(self._on_selection_changed)
 
     @property
     def loading(self) -> bool:
@@ -265,8 +279,8 @@ class QvdFileDataView(QWidget):
         """
         Get the selected value in the table.
         """
-        if self._table_view.selectedIndexes():
-            selected_index = self._table_view.selectedIndexes()[0]
+        if self._table_view.selectionModel().selectedIndexes():
+            selected_index = self._table_view.selectionModel().selectedIndexes()[0]
             return self._table_model.data(selected_index, Qt.ItemDataRole.DisplayRole)
 
         return None
@@ -361,14 +375,27 @@ class QvdFileDataView(QWidget):
         """
         self._table_model.remove_filter(filter_)
 
-    def _on_add_row(self):
+    def _on_prepend_row(self):
         """
-        Handle the add row action.
+        Handle the prepend row action.
         """
         if self._table_view.selectedIndexes() and self._table_view.selectedIndexes()[0].isValid():
-            selected_index = self._table_view.selectedIndexes()[0]
+            selected_index = self._table_view.selectedIndexes()[0].row()
+        else:
+            selected_index = 0
 
-            self._table_view.insert_row(selected_index.row())
+        self._table_view.insert_row(selected_index)
+
+    def _on_append_row(self):
+        """
+        Handle the append row action.
+        """
+        if self._table_view.selectedIndexes() and self._table_view.selectedIndexes()[0].isValid():
+            selected_index = self._table_view.selectedIndexes()[0].row() + 1
+        else:
+            selected_index = self._table_view.model().rowCount()
+
+        self._table_view.insert_row(selected_index)
 
     def _on_remove_row(self):
         """
@@ -379,12 +406,16 @@ class QvdFileDataView(QWidget):
 
             self._table_view.remove_row(selected_index.row())
 
-    def _on_clicked(self, index: QModelIndex):
+            self._table_view.clearSelection()
+
+    def _on_selection_changed(self, selected: QItemSelection, deselected: QItemSelection):
         """
-        Handle the clicked action.
+        Handle the selection changed action.
         """
-        self._add_row_button.setEnabled(True)
-        self._remove_row_button.setEnabled(True)
+        if selected.indexes():
+            self._remove_row_button.setEnabled(True)
+        else:
+            self._remove_row_button.setEnabled(False)
 
     def _on_data_context_menu_copy(self, pos: QPoint):
         """

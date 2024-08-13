@@ -212,7 +212,8 @@ class DataFrameTableModel(QAbstractTableModel):
         dataframe_part1 = self._dataframe.iloc[:row]
         dataframe_part2 = self._dataframe.iloc[row:]
 
-        self._dataframe = pd.concat([dataframe_part1, pd.DataFrame([empty_row]), dataframe_part2]).reset_index(drop=True)
+        self._dataframe = pd.concat([dataframe_part1, pd.DataFrame([empty_row]),
+                                     dataframe_part2]).reset_index(drop=True)
 
         self.endInsertRows()
 

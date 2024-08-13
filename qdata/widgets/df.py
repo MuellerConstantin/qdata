@@ -76,7 +76,13 @@ class DataFrameInsertRowCommand(QUndoCommand):
         self._row = row
 
         if isinstance(self._model, DataFrameSortFilterProxyModel):
-            self._source_row = self._model.mapToSource(self._model.index(self._row, 0)).row()
+            if self._row == self._model.rowCount():
+                if self._row == self._model.sourceModel().rowCount():
+                    self._source_row = self._model.sourceModel().rowCount()
+                else:
+                    self._source_row = self._model.mapToSource(self._model.index(self._row - 1, 0)).row() + 1
+            else:
+                self._source_row = self._model.mapToSource(self._model.index(self._row, 0)).row()
         else:
             self._source_row = self._row
 
@@ -422,6 +428,7 @@ class DataFrameTableView(QTableView):
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
         self.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.setCornerButtonEnabled(False)
 
         self._undo_stack = QUndoStack(self)
         self._undo_stack.canUndoChanged.connect(self.table_undoable)
