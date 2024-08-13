@@ -236,6 +236,37 @@ QTabBar QToolButton::left-arrow:disabled {
     image: url(:/icons/chevron-left-neutral-400.svg);
 }
 
+/* -------- QToolBar -------- */
+
+QToolBar {
+    background: #f5f5f5;
+    border: 0px solid;
+    padding: 2px;
+}
+
+QToolBar:horizontal {
+    border-bottom: 1px solid #e4e4e7;
+}
+
+QToolBar:vertical {
+    border-right: 1px solid #e4e4e7;
+}
+
+QToolBar QToolButton {
+    background: #f5f5f5;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    height: 24px;
+    width: 24px;
+    padding: 3px;
+}
+
+QToolBar QToolButton:hover {
+    background-color: #fafafa;
+    border: 1px solid #e4e4e7;
+    border-radius: 2px;
+}
+
 /* -------- QTableView -------- */
 
 QTableView {

@@ -65,6 +65,66 @@ class DataFrameEditCommand(QUndoCommand):
     def redo(self):
         self._model.setData(self._model.index(self._row, self._col), self._new_value, DataFrameItemDataRole.DATA_ROLE)
 
+class DataFrameInsertRowCommand(QUndoCommand):
+    """
+    Command for inserting a row in a data frame.
+    """
+    def __init__(self, model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel], row: int):
+        super().__init__()
+
+        self._model = model
+        self._row = row
+
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._source_row = self._model.mapToSource(self._model.index(self._row, 0)).row()
+        else:
+            self._source_row = self._row
+
+    def undo(self):
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._model.sourceModel().removeRow(self._source_row)
+        else:
+            self._model.removeRow(self._source_row)
+
+    def redo(self):
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._model.sourceModel().insertRow(self._source_row)
+        else:
+            self._model.insertRow(self._source_row)
+
+class DataFrameRemoveRowCommand(QUndoCommand):
+    """
+    Command for removing a row in a data frame.
+    """
+    def __init__(self, model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel], row: int):
+        super().__init__()
+
+        self._model = model
+        self._row = row
+
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._source_row = self._model.mapToSource(self._model.index(self._row, 0)).row()
+            self._data = self._model.sourceModel().data(self._model.sourceModel().index(self._source_row, 0),
+                                                        DataFrameItemDataRole.DATA_ROW_ROLE)
+        else:
+            self._source_row = self._row
+            self._data = self._model.data(self._model.index(self._row, 0), DataFrameItemDataRole.DATA_ROW_ROLE)
+
+    def undo(self):
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._model.sourceModel().insertRow(self._source_row)
+            self._model.sourceModel().setData(self._model.sourceModel().index(self._row, 0), self._data,
+                                              DataFrameItemDataRole.DATA_ROW_ROLE)
+        else:
+            self._model.insertRow(self._source_row)
+            self._model.setData(self._model.index(self._row, 0), self._data, DataFrameItemDataRole.DATA_ROW_ROLE)
+
+    def redo(self):
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._model.sourceModel().removeRow(self._source_row)
+        else:
+            self._model.removeRow(self._source_row)
+
 class DataFrameCellEditDialog(QDialog):
     """
     Data frame cell edit dialog.
@@ -354,6 +414,8 @@ class DataFrameTableView(QTableView):
     def __init__(self, parent: QWidget = None):
         super().__init__(parent)
 
+        self._model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel] = None
+
         self.setSortingEnabled(True)
         self.setStyleSheet("QTableView {border: 1px solid #d4d4d4;}")
         self.setFrameStyle(QFrame.Shape.Panel | QFrame.Shadow.Raised)
@@ -428,9 +490,11 @@ class DataFrameTableView(QTableView):
     def setModel(self, model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel]) -> None:
         super().setModel(model)
 
-        if model is not None:
-            model.begin_transform.connect(self._on_begin_transform)
-            model.end_transform.connect(self._on_end_transform)
+        self._model = model
+
+        if self._model is not None:
+            self._model.begin_transform.connect(self._on_begin_transform)
+            self._model.end_transform.connect(self._on_end_transform)
 
     def undo(self) -> None:
         """
@@ -449,6 +513,18 @@ class DataFrameTableView(QTableView):
         Mark the current state as saved.
         """
         self._undo_stack.setClean()
+
+    def insert_row(self, index: int) -> None:
+        """
+        Insert a row.
+        """
+        self._undo_stack.push(DataFrameInsertRowCommand(self.model(), index))
+
+    def remove_row(self, index: int) -> None:
+        """
+        Remove a row.
+        """
+        self._undo_stack.push(DataFrameRemoveRowCommand(self.model(), index))
 
     def _on_begin_transform(self) -> None:
         self.loading = True

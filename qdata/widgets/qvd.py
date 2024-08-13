@@ -5,8 +5,8 @@ Contains widgets for displaying QVD files.
 from typing import Tuple
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
                                QMenu, QApplication, QDialog, QLineEdit, QDialogButtonBox,
-                               QStackedWidget, QGridLayout, QMessageBox)
-from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal, QFileSystemWatcher
+                               QStackedWidget, QGridLayout, QMessageBox, QToolBar, QToolButton)
+from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal, QFileSystemWatcher, QModelIndex
 from PySide6.QtGui import QIcon
 import pandas as pd
 from qdata.widgets.progress import Spinner
@@ -176,6 +176,23 @@ class QvdFileDataView(QWidget):
         self._central_layout.setContentsMargins(10, 10, 10, 10)
         self.setLayout(self._central_layout)
 
+        self._toolbar = QToolBar()
+        self._central_layout.addWidget(self._toolbar)
+
+        self._add_row_button = QToolButton()
+        self._add_row_button.setIcon(QIcon(":/icons/add-row-green-600.svg"))
+        self._add_row_button.setToolTip(self.tr("Add Row"))
+        self._add_row_button.clicked.connect(self._on_add_row)
+        self._add_row_button.setEnabled(False)
+        self._toolbar.addWidget(self._add_row_button)
+
+        self._remove_row_button = QToolButton()
+        self._remove_row_button.setIcon(QIcon(":/icons/remove-row-green-600.svg"))
+        self._remove_row_button.setToolTip(self.tr("Remove Row"))
+        self._remove_row_button.clicked.connect(self._on_remove_row)
+        self._remove_row_button.setEnabled(False)
+        self._toolbar.addWidget(self._remove_row_button)
+
         self._filter_tag_view = FilterTagView()
         self._filter_tag_view.setVisible(False)
         self._filter_tag_view.add.connect(lambda: self._filter_tag_view.setVisible(True))
@@ -191,6 +208,7 @@ class QvdFileDataView(QWidget):
         self._table_view.table_redoable.connect(self.table_redoable)
         self._table_view.table_begin_loading.connect(self._on_table_begin_loading)
         self._table_view.table_end_loading.connect(self._on_table_end_loading)
+        self._table_view.clicked.connect(self._on_clicked)
         self._central_layout.addWidget(self._table_view, 1)
 
     @property
@@ -324,8 +342,7 @@ class QvdFileDataView(QWidget):
         """
         Handle the filters reset.
         """
-        for index in reversed(range(self._filter_tag_view.layout().count())):
-            self._filter_tag_view.layout().itemAt(index).widget().deleteLater()
+        self._filter_tag_view.clear_tags()
 
     def _add_filter(self, filter_: DataFrameFilter):
         """
@@ -343,6 +360,31 @@ class QvdFileDataView(QWidget):
         Remove a filter from the table model.
         """
         self._table_model.remove_filter(filter_)
+
+    def _on_add_row(self):
+        """
+        Handle the add row action.
+        """
+        if self._table_view.selectedIndexes() and self._table_view.selectedIndexes()[0].isValid():
+            selected_index = self._table_view.selectedIndexes()[0]
+
+            self._table_view.insert_row(selected_index.row())
+
+    def _on_remove_row(self):
+        """
+        Handle the remove row action.
+        """
+        if self._table_view.selectedIndexes() and self._table_view.selectedIndexes()[0].isValid():
+            selected_index = self._table_view.selectedIndexes()[0]
+
+            self._table_view.remove_row(selected_index.row())
+
+    def _on_clicked(self, index: QModelIndex):
+        """
+        Handle the clicked action.
+        """
+        self._add_row_button.setEnabled(True)
+        self._remove_row_button.setEnabled(True)
 
     def _on_data_context_menu_copy(self, pos: QPoint):
         """

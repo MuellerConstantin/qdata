@@ -32,6 +32,8 @@
         <file alias="qvd-file.svg">icons/qvd-file.svg</file>
         <file alias="circle-neutral-800.svg">icons/circle-neutral-800.svg</file>
         <file alias="file-import-green-600.svg">icons/file-import-green-600.svg</file>
+        <file alias="add-row-green-600.svg">icons/add-row-green-600.svg</file>
+        <file alias="remove-row-green-600.svg">icons/remove-row-green-600.svg</file>
     </qresource>
     <qresource prefix="styles">
         <file alias="global.qss">styles/global.qss</file>

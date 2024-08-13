@@ -132,3 +132,10 @@ class FilterTagView(QWidget):
         """
         tag = self.get_tag_at(index)
         self.remove_tag(tag)
+
+    def clear_tags(self):
+        """
+        Clear all tags.
+        """
+        for index in range(self._tag_container_layout.count() - 1):
+            self.remove_tag_at(index)

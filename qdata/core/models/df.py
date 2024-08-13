@@ -18,6 +18,7 @@ class DataFrameItemDataRole(Enum):
     Custom item data roles for the DataFrameTableModel.
     """
     DATA_ROLE = Qt.ItemDataRole.UserRole + 1
+    DATA_ROW_ROLE = Qt.ItemDataRole.UserRole + 2
 
 class DataFrameTableModelOptions:
     """
@@ -133,6 +134,8 @@ class DataFrameTableModel(QAbstractTableModel):
                 return self.format_data_value(value)
             elif role == DataFrameItemDataRole.DATA_ROLE:
                 return value
+            elif role == DataFrameItemDataRole.DATA_ROW_ROLE:
+                return self._dataframe.iloc[index.row()]
             elif role == Qt.ItemDataRole.FontRole:
                 if value is None or pd.isna(value) or (is_float_dtype(type(value)) and np.isnan(value)):
                     font = QFont()
@@ -173,11 +176,59 @@ class DataFrameTableModel(QAbstractTableModel):
 
                 self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole,
                                                                Qt.ItemDataRole.EditRole,
-                                                                DataFrameItemDataRole.DATA_ROLE])
+                                                               DataFrameItemDataRole.DATA_ROLE,
+                                                               DataFrameItemDataRole.DATA_ROW_ROLE])
+
+                return True
+            elif role == DataFrameItemDataRole.DATA_ROW_ROLE:
+                previous_row = self._dataframe.iloc[index.row()].copy()
+
+                if previous_row.equals(value):
+                    return False
+
+                # Update the base DataFrame
+                self._dataframe.iloc[index.row()] = value
+
+                top_left = self.index(index.row(), 0)
+                bottom_right = self.index(index.row(), self.columnCount() - 1)
+
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole,
+                                                               Qt.ItemDataRole.EditRole,
+                                                               DataFrameItemDataRole.DATA_ROLE,
+                                                               DataFrameItemDataRole.DATA_ROW_ROLE])
 
                 return True
 
         return False
+
+    def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if parent != QModelIndex():
+            return False
+
+        self.beginInsertRows(parent, row, row)
+
+        empty_row = pd.Series([""] * len(self._dataframe.columns), index=self._dataframe.columns)
+
+        dataframe_part1 = self._dataframe.iloc[:row]
+        dataframe_part2 = self._dataframe.iloc[row:]
+
+        self._dataframe = pd.concat([dataframe_part1, pd.DataFrame([empty_row]), dataframe_part2]).reset_index(drop=True)
+
+        self.endInsertRows()
+
+        return True
+
+    def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if parent != QModelIndex():
+            return False
+
+        self.beginRemoveRows(parent, row, row)
+
+        self._dataframe = self._dataframe.drop(self._dataframe.index[row]).reset_index(drop=True)
+
+        self.endRemoveRows()
+
+        return True
 
     def format_data_value(self, value: object) -> str:
         """
@@ -333,6 +384,8 @@ class DataFrameSortFilterProxyModel(QAbstractProxyModel):
                 return self._source_model.format_data_value(value)
             elif role == DataFrameItemDataRole.DATA_ROLE:
                 return value
+            elif role == DataFrameItemDataRole.DATA_ROW_ROLE:
+                return self._proxy_dataframe.iloc[index.row()]
             elif role == Qt.ItemDataRole.FontRole:
                 if value is None or pd.isna(value) or (is_float_dtype(type(value)) and np.isnan(value)):
                     font = QFont()
@@ -349,6 +402,22 @@ class DataFrameSortFilterProxyModel(QAbstractProxyModel):
             return self._source_model.setData(source_index, value, role)
 
         return False
+
+    def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if parent != QModelIndex():
+            return False
+
+        source_row = self.mapToSource(self.index(row, 0)).row()
+
+        return self._source_model.insertRow(source_row, parent)
+
+    def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if parent != QModelIndex():
+            return False
+
+        source_row = self.mapToSource(self.index(row, 0)).row()
+
+        return self._source_model.removeRow(source_row, parent)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> object:
         if self._proxy_dataframe is not None:
