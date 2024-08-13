@@ -96,14 +96,14 @@ class QvdFileFieldValuesDialog(QDialog):
         """
         Handle the table model ending to filter.
         """
-        self._found_values_label.setText(self.tr("Found Values: ") + str(len(self._table_model.df)))
+        self._found_values_label.setText(self.tr("Found Values: ") + str(len(self._table_model.dataframe)))
 
     def _on_data_context_menu_copy(self, pos: QPoint):
         """
         Handle the context menu copy action.
         """
         selected_index = self._table_view.indexAt(pos)
-        column_value = self._table_model.df.iloc[selected_index.row(), selected_index.column()]
+        column_value = self._table_model.dataframe.iloc[selected_index.row(), selected_index.column()]
         QApplication.clipboard().setText(str(column_value))
 
     def _on_data_context_menu_filter(self, pos: QPoint, operation: DataFrameFilterOperation):
@@ -111,8 +111,8 @@ class QvdFileFieldValuesDialog(QDialog):
         Handle the context menu filter action.
         """
         selected_index = self._table_view.indexAt(pos)
-        value_column_index = self._table_model.df.columns.get_loc(self.tr("Value"))
-        column_value = self._table_model.df.iloc[selected_index.row(), value_column_index]
+        value_column_index = self._table_model.dataframe.columns.get_loc(self.tr("Value"))
+        column_value = self._table_model.dataframe.iloc[selected_index.row(), value_column_index]
 
         self.filtered.emit(DataFrameFilter(self._column, operation, column_value))
         self.accept()
@@ -349,7 +349,7 @@ class QvdFileDataView(QWidget):
         Handle the context menu copy action.
         """
         selected_index = self._table_view.indexAt(pos)
-        column_value = self._table_model.df.iloc[selected_index.row(), selected_index.column()]
+        column_value = self._table_model.dataframe.iloc[selected_index.row(), selected_index.column()]
         QApplication.clipboard().setText(str(column_value))
 
     def _on_data_context_menu_filter(self, pos: QPoint, operation: DataFrameFilterOperation):
@@ -409,7 +409,7 @@ class QvdFileDataView(QWidget):
         Handle the header context menu copy column name action.
         """
         column_index = self._table_view.horizontalHeader().logicalIndexAt(pos)
-        column_name = self._table_model.df.columns[column_index]
+        column_name = self._table_model.dataframe.columns[column_index]
         QApplication.clipboard().setText(str(column_name))
 
     def _on_header_context_field_values(self, pos: QPoint):
@@ -417,9 +417,9 @@ class QvdFileDataView(QWidget):
         Handle the header context menu field values action.
         """
         column_index = self._table_view.horizontalHeader().logicalIndexAt(pos)
-        column_name = self._table_model.df.columns[column_index]
+        column_name = self._table_model.dataframe.columns[column_index]
 
-        value_counts = self._table_model.df[column_name].value_counts(dropna=False)
+        value_counts = self._table_model.dataframe[column_name].value_counts(dropna=False)
         field_values = pd.DataFrame(value_counts).reset_index()
         field_values.columns = [self.tr("Value"), self.tr("Count")]
 
