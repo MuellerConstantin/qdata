@@ -1,12 +1,2 @@
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Uploaded to: SVG Repo, www.svgrepo.com, Transformed by: SVG Repo Mixer Tools -->
-<!-- Vectors and icons by <a href="https://github.com/krystonschwarze/coolicons?ref=svgrepo.com" target="_blank">Krystonschwarze</a> in CC Attribution License via <a href="https://www.svgrepo.com/" target="_blank">SVG Repo</a> -->
-<svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-
-<g id="SVGRepo_bgCarrier" stroke-width="0"/>
-
-<g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
-
-<g id="SVGRepo_iconCarrier"> <g id="Edit / Add_Row"> <path id="Vector" d="M3 14V15C3 16.1046 3.89543 17 5 17L19 17C20.1046 17 21 16.1046 21 15L21 13C21 11.8954 20.1046 11 19 11H13M10 8H7M7 8H4M7 8V5M7 8V11" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/> </g> </g>
-
-</svg>
+<!-- Icon made by Pictogrammer (https://pictogrammers.com) under the Apache License 2.0 (http://www.apache.org/licenses/LICENSE-2.0) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#16a34a" d="M22,14A2,2 0 0,0 20,12H4A2,2 0 0,0 2,14V21H4V19H8V21H10V19H14V21H16V19H20V21H22V14M4,14H8V17H4V14M10,14H14V17H10V14M20,14V17H16V14H20M11,10H13V7H16V5H13V2H11V5H8V7H11V10Z" /></svg>

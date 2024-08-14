@@ -216,7 +216,7 @@ class MainWindow(QMainWindow):
         self._table_filtered_shape_layout.addWidget(self._table_filtered_shape_titel_label)
 
         self._table_filtered_shape_icon = QLabel()
-        self._table_filtered_shape_icon.setPixmap(QIcon(":/icons/table-green-600.svg").pixmap(12, 12))
+        self._table_filtered_shape_icon.setPixmap(QIcon(":/icons/table-filter-green-600.svg").pixmap(12, 12))
         self._table_filtered_shape_layout.addWidget(self._table_filtered_shape_icon)
 
         self._table_filtered_shape_label = QLabel()

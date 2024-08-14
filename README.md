@@ -10,6 +10,7 @@
 
 - [Introduction](#introduction)
 - [License](#license)
+  - [Third Party Licenses](#third-party-licenses)
   - [Forbidden](#forbidden)
 
 ---
@@ -60,6 +61,21 @@ SOFTWARE.
 
 [MIT License](https://opensource.org/licenses/MIT) or [LICENSE](LICENSE) for
 more details.
+
+### Third Party Licenses
+
+The software uses third party resources and libraries that are subject to their
+own licenses. The following third party resources are used in the software:
+
+- [PyQvd](https://www.github.com/MuellerConstantin/PyQvd) - MIT License
+- [PySide6](https://www.qt.io/) - LGPL-3.0 License
+- [pandas](https://pandas.pydata.org/) - BSD-3-Clause License
+- [numpy](https://numpy.org/) - BSD-3-Clause License
+- [Pictogrammers SVG Icons](https://pictogrammers.com/) - Apache-2.0 License
+
+In most cases, the licenses are included directly with the libraries. If this
+is not the case, for example with assets, the license files are manually added
+to the project.
 
 ### Forbidden
 
