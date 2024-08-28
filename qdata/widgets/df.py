@@ -45,7 +45,7 @@ class LoadingOverlay(QWidget):
         painter.drawRect(0, 0, size.width(), size.height())
         painter.end()
 
-class DataFrameEditCommand(QUndoCommand):
+class DataFrameEditCellValueCommand(QUndoCommand):
     """
     Command for editing a data frame.
     """
@@ -64,6 +64,25 @@ class DataFrameEditCommand(QUndoCommand):
 
     def redo(self):
         self._model.setData(self._model.index(self._row, self._col), self._new_value, DataFrameItemDataRole.DATA_ROLE)
+
+class DataFrameRenameColumnCommand(QUndoCommand):
+    """
+    Command for renaming a column in a data frame.
+    """
+    def __init__(self, model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel], col: int,
+                 old_name: str, new_name: str):
+        super().__init__()
+
+        self._model = model
+        self._col = col
+        self._old_name = old_name
+        self._new_name = new_name
+
+    def undo(self):
+        self._model.setHeaderData(self._col, Qt.Orientation.Horizontal, self._old_name, DataFrameItemDataRole.DATA_ROLE)
+
+    def redo(self):
+        self._model.setHeaderData(self._col, Qt.Orientation.Horizontal, self._new_name, DataFrameItemDataRole.DATA_ROLE)
 
 class DataFrameInsertRowCommand(QUndoCommand):
     """
@@ -131,7 +150,7 @@ class DataFrameRemoveRowCommand(QUndoCommand):
         else:
             self._model.removeRow(self._source_row)
 
-class DataFrameCellEditDialog(QDialog):
+class DataFrameCellValueEditDialog(QDialog):
     """
     Data frame cell edit dialog.
     """
@@ -383,6 +402,76 @@ class DataFrameCellEditDialog(QDialog):
             self._format_combo_box.addItems(["Dollar ($ #,###.##)",
                                              "Euro (#.###,## €)"])
 
+class DataFrameColumnNameEditDialog(QDialog):
+    """
+    Data frame header cell edit dialog.
+    """
+    def __init__(self, current_value: str, parent: QWidget = None):
+        super().__init__(parent)
+
+        self._value = None
+        self._previous_value = current_value
+
+        self.setWindowTitle(self.tr("Edit Column Name"))
+        self.setFixedSize(400, 120)
+        self.setWindowIcon(QIcon(":/favicons/favicon-dark.ico"))
+
+        self._central_layout = QVBoxLayout()
+        self._central_layout.setContentsMargins(10, 10, 10, 10)
+        self._central_layout.setSpacing(10)
+        self.setLayout(self._central_layout)
+
+        self._title_label = QLabel(self.tr("Name"))
+        self._title_label.setProperty("class", "title-label")
+        self._central_layout.addWidget(self._title_label)
+
+        self._value_edit_layout = QVBoxLayout()
+        self._value_edit_layout.setContentsMargins(0, 0, 0, 0)
+        self._value_edit_layout.setSpacing(2)
+        self._central_layout.addLayout(self._value_edit_layout)
+
+        self._value_edit = QLineEdit()
+        self._value_edit.setProperty("class", "value-edit")
+        self._value_edit.setMinimumHeight(30)
+        self._value_edit.setText(current_value)
+        self._value_edit.setPlaceholderText(self.tr("Enter value..."))
+        self._value_edit_layout.addWidget(self._value_edit)
+
+        self._error_label = QLabel()
+        self._error_label.setProperty("class", "error-label")
+        self._error_label.setVisible(False)
+        self._value_edit_layout.addWidget(self._error_label)
+
+        self._central_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum,
+                                                       QSizePolicy.Policy.MinimumExpanding))
+
+        self._dialog_button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply |
+                                                   QDialogButtonBox.StandardButton.Cancel)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._on_apply)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.reject)
+        self._central_layout.addWidget(self._dialog_button_box)
+
+    @property
+    def value(self) -> object:
+        """
+        Get the value.
+        """
+        return self._value
+
+    @property
+    def previous_value(self) -> str:
+        """
+        Get the previous value.
+        """
+        return self._previous_value
+
+    def _on_apply(self) -> None:
+        """
+        Apply the changes.
+        """
+        self._value = self._value_edit.text()
+        self.accept()
+
 class DataFrameItemDelegate(QItemDelegate):
     """
     Data frame item delegate.
@@ -395,16 +484,16 @@ class DataFrameItemDelegate(QItemDelegate):
     def createEditor(self, parent: QWidget, _: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
         current_value = index.data(Qt.ItemDataRole.DisplayRole)
 
-        return DataFrameCellEditDialog(current_value, parent)
+        return DataFrameCellValueEditDialog(current_value, parent)
 
-    def setModelData(self, editor: DataFrameCellEditDialog,
+    def setModelData(self, editor: DataFrameCellValueEditDialog,
                      model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel],
                      index: QModelIndex) -> None:
         if editor.result() == QDialog.DialogCode.Accepted:
             previous_value = editor.previous_value
             new_value = editor.value
 
-            self._undo_stack.push(DataFrameEditCommand(model, index.row(), index.column(),
+            self._undo_stack.push(DataFrameEditCellValueCommand(model, index.row(), index.column(),
                                                        previous_value, new_value))
 
 class DataFrameTableView(QTableView):
@@ -429,6 +518,7 @@ class DataFrameTableView(QTableView):
         self.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setCornerButtonEnabled(False)
+        self.setEditTriggers(QTableView.EditTrigger.DoubleClicked)
 
         self._undo_stack = QUndoStack(self)
         self._undo_stack.canUndoChanged.connect(self.table_undoable)
@@ -443,6 +533,15 @@ class DataFrameTableView(QTableView):
         self._loading_overlay.hide()
 
         self.setItemDelegate(DataFrameItemDelegate(self._undo_stack, self))
+        self.horizontalHeader().sectionDoubleClicked.connect(self._on_horizontal_header_section_double_clicked)
+
+    def _on_horizontal_header_section_double_clicked(self, index: int) -> None:
+        column_name = self.model().headerData(index, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
+        dialog = DataFrameColumnNameEditDialog(column_name, self)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_column_name = dialog.value
+            self._undo_stack.push(DataFrameRenameColumnCommand(self.model(), index, column_name, new_column_name))
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)

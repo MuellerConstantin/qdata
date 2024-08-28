@@ -201,6 +201,34 @@ class DataFrameTableModel(QAbstractTableModel):
 
         return False
 
+    def setHeaderData(self, section: int, orientation: Qt.Orientation, value: object, role: int = ...) -> bool:
+        if self._dataframe is not None:
+            if role == Qt.ItemDataRole.EditRole or role == DataFrameItemDataRole.DATA_ROLE:
+                if orientation == Qt.Orientation.Horizontal:
+                    previous_value = self._dataframe.columns[section]
+
+                    if previous_value == value:
+                        return False
+
+                    self._dataframe.columns.values[section] = value
+
+                    self.headerDataChanged.emit(orientation, section, section)
+
+                    return True
+                elif orientation == Qt.Orientation.Vertical:
+                    previous_value = self._dataframe.index[section]
+
+                    if previous_value == value:
+                        return False
+
+                    self._dataframe.index.values[section] = value
+
+                    self.headerDataChanged.emit(orientation, section, section)
+
+                    return True
+
+        return False
+
     def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
         if parent != QModelIndex():
             return False
@@ -404,6 +432,9 @@ class DataFrameSortFilterProxyModel(QAbstractProxyModel):
 
         return False
 
+    def setHeaderData(self, section: int, orientation: Qt.Orientation, value: object, role: int = ...) -> bool:
+        return self._source_model.setHeaderData(section, orientation, value, role)
+
     def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
         if parent != QModelIndex():
             return False
@@ -419,6 +450,18 @@ class DataFrameSortFilterProxyModel(QAbstractProxyModel):
         source_row = self.mapToSource(self.index(row, 0)).row()
 
         return self._source_model.removeRow(source_row, parent)
+
+    def insertColumn(self, column: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if parent != QModelIndex():
+            return False
+
+        return self._source_model.insertColumn(column, parent)
+
+    def removeColumn(self, column: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if parent != QModelIndex():
+            return False
+
+        return self._source_model.removeColumn(column, parent)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> object:
         if self._proxy_dataframe is not None:

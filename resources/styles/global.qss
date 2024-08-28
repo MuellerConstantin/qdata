@@ -598,9 +598,9 @@ QvdFileErrorView QLabel.title-label {
     font-size: 18px;
 }
 
-/* -------- DataFrameCellEditDialog -------- */
+/* -------- DataFrameCellValueEditDialog -------- */
 
-DataFrameCellEditDialog QLineEdit.value-edit {
+DataFrameCellValueEditDialog QLineEdit.value-edit {
     color: #262626;
     background-color: #ffffff;
     border: 1px solid #e4e4e7;
@@ -610,16 +610,42 @@ DataFrameCellEditDialog QLineEdit.value-edit {
     selection-background-color: #16a34a;
 }
 
-DataFrameCellEditDialog QLineEdit.value-edit:focus {
+DataFrameCellValueEditDialog QLineEdit.value-edit:focus {
     border: 1px solid #16a34a;
 }
 
-DataFrameCellEditDialog QLabel.error-label {
+DataFrameCellValueEditDialog QLabel.error-label {
     color: #ef4444;
     font-size: 12px;
 }
 
-DataFrameCellEditDialog QLabel.title-label {
+DataFrameCellValueEditDialog QLabel.title-label {
+    font-size: 16px;
+    font-weight: semi-bold;
+}
+
+/* -------- DataFrameColumnNameEditDialog -------- */
+
+DataFrameColumnNameEditDialog QLineEdit.value-edit {
+    color: #262626;
+    background-color: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 2px;
+    padding: 4px;
+    selection-color: #ffffff;
+    selection-background-color: #16a34a;
+}
+
+DataFrameColumnNameEditDialog QLineEdit.value-edit:focus {
+    border: 1px solid #16a34a;
+}
+
+DataFrameColumnNameEditDialog QLabel.error-label {
+    color: #ef4444;
+    font-size: 12px;
+}
+
+DataFrameColumnNameEditDialog QLabel.title-label {
     font-size: 16px;
     font-weight: semi-bold;
 }
