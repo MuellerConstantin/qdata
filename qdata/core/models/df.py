@@ -19,6 +19,7 @@ class DataFrameItemDataRole(Enum):
     """
     DATA_ROLE = Qt.ItemDataRole.UserRole + 1
     DATA_ROW_ROLE = Qt.ItemDataRole.UserRole + 2
+    DATA_COLUMN_ROLE = Qt.ItemDataRole.UserRole + 3
 
 class DataFrameTableModelOptions:
     """
@@ -136,6 +137,8 @@ class DataFrameTableModel(QAbstractTableModel):
                 return value
             elif role == DataFrameItemDataRole.DATA_ROW_ROLE:
                 return self._dataframe.iloc[index.row()]
+            elif role == DataFrameItemDataRole.DATA_COLUMN_ROLE:
+                return self._dataframe.iloc[:, index.column()]
             elif role == Qt.ItemDataRole.FontRole:
                 if value is None or pd.isna(value) or (is_float_dtype(type(value)) and np.isnan(value)):
                     font = QFont()
@@ -198,6 +201,24 @@ class DataFrameTableModel(QAbstractTableModel):
                                                                DataFrameItemDataRole.DATA_ROW_ROLE])
 
                 return True
+            elif role == DataFrameItemDataRole.DATA_COLUMN_ROLE:
+                previous_column = self._dataframe.iloc[:, index.column()].copy()
+
+                if previous_column.equals(value):
+                    return False
+
+                # Update the base DataFrame
+                self._dataframe.iloc[:, index.column()] = value
+
+                top_left = self.index(0, index.column())
+                bottom_right = self.index(self.rowCount() - 1, index.column())
+
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole,
+                                                               Qt.ItemDataRole.EditRole,
+                                                               DataFrameItemDataRole.DATA_ROLE,
+                                                               DataFrameItemDataRole.DATA_COLUMN_ROLE])
+
+                return True
 
         return False
 
@@ -256,6 +277,36 @@ class DataFrameTableModel(QAbstractTableModel):
         self._dataframe = self._dataframe.drop(self._dataframe.index[row]).reset_index(drop=True)
 
         self.endRemoveRows()
+
+        return True
+
+    def insertColumn(self, column: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if parent != QModelIndex():
+            return False
+
+        self.beginInsertColumns(parent, column, column)
+
+        empty_column = pd.Series([""] * len(self._dataframe), name="")
+
+        dataframe_part1 = self._dataframe.iloc[:, :column]
+        dataframe_part2 = self._dataframe.iloc[:, column:]
+
+        self._dataframe = pd.concat([dataframe_part1, pd.DataFrame({"New column" : empty_column}),
+                                     dataframe_part2], axis=1)
+
+        self.endInsertColumns()
+
+        return True
+
+    def removeColumn(self, column: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if parent != QModelIndex():
+            return False
+
+        self.beginRemoveColumns(parent, column, column)
+
+        self._dataframe = self._dataframe.drop(self._dataframe.columns[column], axis=1)
+
+        self.endRemoveColumns()
 
         return True
 

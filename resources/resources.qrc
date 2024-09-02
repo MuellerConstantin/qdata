@@ -35,6 +35,9 @@
         <file alias="prepend-row-green-600.svg">icons/prepend-row-green-600.svg</file>
         <file alias="append-row-green-600.svg">icons/append-row-green-600.svg</file>
         <file alias="remove-row-green-600.svg">icons/remove-row-green-600.svg</file>
+        <file alias="prepend-column-green-600.svg">icons/prepend-column-green-600.svg</file>
+        <file alias="append-column-green-600.svg">icons/append-column-green-600.svg</file>
+        <file alias="remove-column-green-600.svg">icons/remove-column-green-600.svg</file>
     </qresource>
     <qresource prefix="styles">
         <file alias="global.qss">styles/global.qss</file>

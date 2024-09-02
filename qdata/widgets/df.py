@@ -150,6 +150,72 @@ class DataFrameRemoveRowCommand(QUndoCommand):
         else:
             self._model.removeRow(self._source_row)
 
+class DataFrameInsertColumnCommand(QUndoCommand):
+    """
+    Command for inserting a column in a data frame.
+    """
+    def __init__(self, model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel], col: int):
+        super().__init__()
+
+        self._model = model
+        self._col = col
+
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            if self._col == self._model.columnCount():
+                if self._col == self._model.sourceModel().columnCount():
+                    self._source_col = self._model.sourceModel().columnCount()
+                else:
+                    self._source_col = self._model.mapToSource(self._model.index(0, self._col - 1)).column() + 1
+            else:
+                self._source_col = self._model.mapToSource(self._model.index(0, self._col)).column()
+        else:
+            self._source_col = self._col
+
+    def undo(self):
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._model.sourceModel().removeColumn(self._source_col)
+        else:
+            self._model.removeColumn(self._source_col)
+
+    def redo(self):
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._model.sourceModel().insertColumn(self._source_col)
+        else:
+            self._model.insertColumn(self._source_col)
+
+class DataFrameRemoveColumnCommand(QUndoCommand):
+    """
+    Command for removing a column in a data frame.
+    """
+    def __init__(self, model: Union[DataFrameTableModel, DataFrameSortFilterProxyModel], col: int):
+        super().__init__()
+
+        self._model = model
+        self._col = col
+
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._source_col = self._model.mapToSource(self._model.index(0, self._col)).column()
+            self._data = self._model.sourceModel().data(self._model.sourceModel().index(0, self._source_col),
+                                                        DataFrameItemDataRole.DATA_COLUMN_ROLE)
+        else:
+            self._source_col = self._col
+            self._data = self._model.data(self._model.index(0, self._col), DataFrameItemDataRole.DATA_COLUMN_ROLE)
+
+    def undo(self):
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._model.sourceModel().insertColumn(self._source_col)
+            self._model.sourceModel().setData(self._model.sourceModel().index(0, self._col), self._data,
+                                              DataFrameItemDataRole.DATA_COLUMN_ROLE)
+        else:
+            self._model.insertColumn(self._source_col)
+            self._model.setData(self._model.index(0, self._col), self._data, DataFrameItemDataRole.DATA_COLUMN_ROLE)
+
+    def redo(self):
+        if isinstance(self._model, DataFrameSortFilterProxyModel):
+            self._model.sourceModel().removeColumn(self._source_col)
+        else:
+            self._model.removeColumn(self._source_col)
+
 class DataFrameCellValueEditDialog(QDialog):
     """
     Data frame cell edit dialog.
@@ -631,6 +697,18 @@ class DataFrameTableView(QTableView):
         Remove a row.
         """
         self._undo_stack.push(DataFrameRemoveRowCommand(self.model(), index))
+
+    def insert_column(self, index: int) -> None:
+        """
+        Insert a column.
+        """
+        self._undo_stack.push(DataFrameInsertColumnCommand(self.model(), index))
+
+    def remove_column(self, index: int) -> None:
+        """
+        Remove a column.
+        """
+        self._undo_stack.push(DataFrameRemoveColumnCommand(self.model(), index))
 
     def _on_begin_transform(self) -> None:
         self.loading = True

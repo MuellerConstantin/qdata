@@ -198,6 +198,27 @@ class QvdFileDataView(QWidget):
         self._remove_row_button.setEnabled(False)
         self._toolbar.addWidget(self._remove_row_button)
 
+        self._toolbar.addSeparator()
+
+        self._prepend_column_button = QToolButton()
+        self._prepend_column_button.setIcon(QIcon(":/icons/prepend-column-green-600.svg"))
+        self._prepend_column_button.setToolTip(self.tr("Prepend Column"))
+        self._prepend_column_button.clicked.connect(self._on_prepend_column)
+        self._toolbar.addWidget(self._prepend_column_button)
+
+        self._append_column_button = QToolButton()
+        self._append_column_button.setIcon(QIcon(":/icons/append-column-green-600.svg"))
+        self._append_column_button.setToolTip(self.tr("Append Column"))
+        self._append_column_button.clicked.connect(self._on_append_column)
+        self._toolbar.addWidget(self._append_column_button)
+
+        self._remove_column_button = QToolButton()
+        self._remove_column_button.setIcon(QIcon(":/icons/remove-column-green-600.svg"))
+        self._remove_column_button.setToolTip(self.tr("Remove Column"))
+        self._remove_column_button.clicked.connect(self._on_remove_column)
+        self._remove_column_button.setEnabled(False)
+        self._toolbar.addWidget(self._remove_column_button)
+
         self._filter_tag_view = FilterTagView()
         self._filter_tag_view.setVisible(False)
         self._filter_tag_view.add.connect(lambda: self._filter_tag_view.setVisible(True))
@@ -408,14 +429,49 @@ class QvdFileDataView(QWidget):
 
             self._table_view.clearSelection()
 
+    def _on_prepend_column(self):
+        """
+        Handle the prepend column action.
+        """
+        if self._table_view.selectedIndexes() and self._table_view.selectedIndexes()[0].isValid():
+            selected_index = self._table_view.selectedIndexes()[0].column()
+        else:
+            selected_index = 0
+
+        self._table_view.insert_column(selected_index)
+
+    def _on_append_column(self):
+        """
+        Handle the append column action.
+        """
+        if self._table_view.selectedIndexes() and self._table_view.selectedIndexes()[0].isValid():
+            selected_index = self._table_view.selectedIndexes()[0].column() + 1
+        else:
+            selected_index = self._table_view.model().columnCount()
+
+        self._table_view.insert_column(selected_index)
+
+    def _on_remove_column(self):
+        """
+        Handle the remove column action.
+        """
+        if self._table_view.selectedIndexes() and self._table_view.selectedIndexes()[0].isValid():
+            selected_index = self._table_view.selectedIndexes()[0]
+
+            self._table_view.remove_column(selected_index.column())
+
+            self._table_view.clearSelection()
+
     def _on_selection_changed(self, selected: QItemSelection, deselected: QItemSelection):
         """
         Handle the selection changed action.
         """
         if selected.indexes():
             self._remove_row_button.setEnabled(True)
+            self._remove_column_button.setEnabled(True)
         else:
             self._remove_row_button.setEnabled(False)
+            self._remove_column_button.setEnabled(False)
 
     def _on_data_context_menu_copy(self, pos: QPoint):
         """
