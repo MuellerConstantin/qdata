@@ -310,7 +310,9 @@ class DataFrameCellValueEditDialog(QDialog):
         self._dialog_button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply |
                                                    QDialogButtonBox.StandardButton.Cancel)
         self._dialog_button_box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._on_apply)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Apply).setDefault(True)
         self._dialog_button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.reject)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Cancel).setAutoDefault(False)
         self._central_layout.addWidget(self._dialog_button_box)
 
     @property
@@ -514,7 +516,9 @@ class DataFrameColumnNameEditDialog(QDialog):
         self._dialog_button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply |
                                                    QDialogButtonBox.StandardButton.Cancel)
         self._dialog_button_box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._on_apply)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Apply).setDefault(True)
         self._dialog_button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.reject)
+        self._dialog_button_box.button(QDialogButtonBox.StandardButton.Cancel).setAutoDefault(False)
         self._central_layout.addWidget(self._dialog_button_box)
 
     @property
