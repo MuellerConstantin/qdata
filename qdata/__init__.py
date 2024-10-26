@@ -2,7 +2,7 @@
 Root package for qdata.
 """
 
-__version__ = "0.1.0-dev.1"
+__version__ = "0.1.0-dev.2"
 __app_name__ = "QData"
 __organization__ = "QData"
 __author__ = "Constantin Müller"
