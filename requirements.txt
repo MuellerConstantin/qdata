@@ -3,6 +3,6 @@ pylint
 invoke
 nuitka==2.3.*
 PySide6==6.7.*
-PyQvd==2.1.*
+PyQvd==2.2.*
 numpy==1.26.*
 pandas==2.2.*
