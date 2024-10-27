@@ -15,6 +15,7 @@ class LoadQvdFileTaskSignals(QObject):
     finished = Signal()
     error = Signal(Exception)
     data = Signal(pd.DataFrame)
+    progress = Signal(float)
 
 class LoadQvdFileTask(QRunnable):
     """
@@ -28,7 +29,17 @@ class LoadQvdFileTask(QRunnable):
 
     def run(self) -> None:
         try:
-            df = QvdTable.from_qvd(self._path)
+            df = QvdTable([], [])
+
+            itr = QvdTable.from_qvd(self._path, chunk_size=1000)
+            nth_chunk = 0
+            total_chunks = len(itr)
+
+            for chunk in itr:
+                df.concat(chunk, inplace=True)
+                self.signals.progress.emit((nth_chunk / total_chunks) * 100)
+                nth_chunk += 1
+
             df = df.to_pandas()
 
             self.signals.data.emit(df)

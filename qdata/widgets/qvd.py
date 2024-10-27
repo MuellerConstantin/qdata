@@ -5,11 +5,11 @@ Contains widgets for displaying QVD files.
 from typing import Tuple
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QSpacerItem, QSizePolicy, QLabel,
                                QMenu, QApplication, QDialog, QLineEdit, QDialogButtonBox,
-                               QStackedWidget, QGridLayout, QMessageBox, QToolBar, QToolButton)
+                               QStackedWidget, QGridLayout, QMessageBox, QToolBar, QToolButton,
+                               QProgressBar)
 from PySide6.QtCore import QThreadPool, Qt, QPoint, Signal, QFileSystemWatcher, QItemSelection
 from PySide6.QtGui import QIcon
 import pandas as pd
-from qdata.widgets.progress import Spinner
 from qdata.widgets.filter import FilterTagView, FilterTag
 from qdata.widgets.df import DataFrameTableView
 from qdata.core.models.df import DataFrameTableModel, DataFrameSortFilterProxyModel
@@ -646,15 +646,43 @@ class QvdFileLoadingView(QWidget):
     def __init__(self, parent: QWidget = None):
         super().__init__(parent)
 
+        self._progress: float = 0
+
         self._central_layout = QVBoxLayout()
-        self._central_layout.setContentsMargins(10, 10, 10, 10)
+        self._central_layout.setContentsMargins(100, 10, 100, 10)
         self.setLayout(self._central_layout)
 
-        self._spinner = Spinner()
-        self._spinner.setFixedHeight(32)
-        self._central_layout.addWidget(self._spinner)
+        self._central_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+
+        self._loading_label = QLabel()
+        self._loading_label.setAlignment(Qt.AlignCenter)
+        self._loading_label.setText(self.tr("Loading QVD File..."))
+        self._central_layout.addWidget(self._loading_label)
+
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setRange(0, 100)
+        self._central_layout.addWidget(self._progress_bar)
 
         self._central_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+
+    @property
+    def progress(self) -> float:
+        """
+        Get the progress of the loading.
+        """
+        return self._progress
+
+    @progress.setter
+    def progress(self, value: float):
+        self._progress = value
+        self._progress_bar.setValue(value)
+
+        if value <= 50:
+            self._progress_bar.setProperty("class", "below-half")
+            self._progress_bar.style().polish(self._progress_bar)
+        else:
+            self._progress_bar.setProperty("class", "above-half")
+            self._progress_bar.style().polish(self._progress_bar)
 
 class QvdFileWidget(QStackedWidget):
     """
@@ -849,6 +877,7 @@ class QvdFileWidget(QStackedWidget):
         task.signals.data.connect(self._on_load_task_data)
         task.signals.error.connect(self._on_load_task_error)
         task.signals.finished.connect(self._on_load_task_finished)
+        task.signals.progress.connect(self._on_load_task_progress)
 
         QThreadPool.globalInstance().start(task)
 
@@ -931,6 +960,12 @@ class QvdFileWidget(QStackedWidget):
         """
         self._loading = False
         self._data_view.loading = False
+
+    def _on_load_task_progress(self, progress: float):
+        """
+        Handle the task progress.
+        """
+        self._loading_view.progress = progress
 
     def _on_persist_task_succeeded(self):
         """
